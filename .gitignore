@@ -3,8 +3,10 @@
 .env.*
 !.env.example
 
-# Database credentials
+# Database credentials (real passwords never go into Git)
+#   config/db_connect.example.php is the shared template
 config/db_local.php
+config/db_connect.php
 
 # Uploaded files
 storage/uploads/*
