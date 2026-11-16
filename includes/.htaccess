@@ -1,0 +1,11 @@
+# The PHP files here are only loaded by the pages. Browsers may still
+# load the CSS and JavaScript in includes/css and includes/js.
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

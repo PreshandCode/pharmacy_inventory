@@ -1,0 +1,9 @@
+# The app/ folder holds PHP code that should only run through the page
+# files (medicine.php, stock.php ...). Block direct visits from browsers.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
