@@ -52,4 +52,4 @@
 </script>
 <?php } ?>
 
-<p class="auth-foot mb-0">Forgot your password? Ask your administrator.</p>
+<p class="auth-foot mb-0">Don't have an account? <a href="register.php" class="fw-semibold">Create one</a></p>

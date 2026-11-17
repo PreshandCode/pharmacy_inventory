@@ -11,17 +11,17 @@ class Notification extends Model
      * Retrieve all active alerts and recent system events.
      * Returns an array with categorized notifications, count, and summary.
      */
-    public function getAllNotifications(int $limitRecent = 10): array
+    public function getAllNotifications(int $limitRecent = 10, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "AND user_id = ?" : "";
+        $whereOnly = $userId ? "WHERE user_id = ?" : "";
         $notifications = [];
 
         // 1. Expired Products (Critical Alert)
-        $expired = $this->all(
-            "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
-             FROM medicines
-             WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND quantity > 0
-             ORDER BY expiry_date ASC LIMIT 5"
-        );
+        $expired = $userId
+            ? $this->all("SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND quantity > 0 AND user_id = ? ORDER BY expiry_date ASC LIMIT 5", "i", [$userId])
+            : $this->all("SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND quantity > 0 ORDER BY expiry_date ASC LIMIT 5");
         foreach ($expired as $m) {
             $notifications[] = [
                 "id"       => "exp_" . $m["medicine_id"],
@@ -39,18 +39,9 @@ class Notification extends Model
 
         // 2. Products Expiring Soon (Within 30 Days)
         $criticalDays = min(EXPIRY_CRITICAL_DAYS, EXPIRY_WARNING_DAYS);
-        $expiring = $this->all(
-            "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date,
-                    DATEDIFF(expiry_date, CURDATE()) AS days_left
-             FROM medicines
-             WHERE expiry_date IS NOT NULL
-               AND expiry_date >= CURDATE()
-               AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-               AND quantity > 0
-             ORDER BY expiry_date ASC LIMIT 5",
-            "i",
-            [$criticalDays]
-        );
+        $expiring = $userId
+            ? $this->all("SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) AND quantity > 0 AND user_id = ? ORDER BY expiry_date ASC LIMIT 5", "ii", [$criticalDays, $userId])
+            : $this->all("SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date, DATEDIFF(expiry_date, CURDATE()) AS days_left FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) AND quantity > 0 ORDER BY expiry_date ASC LIMIT 5", "i", [$criticalDays]);
         foreach ($expiring as $m) {
             $daysLeft = (int) $m["days_left"];
             $daysLabel = $daysLeft === 0 ? "today" : "in " . $daysLeft . " day" . ($daysLeft === 1 ? "" : "s");
@@ -69,12 +60,9 @@ class Notification extends Model
         }
 
         // 3. Out of Stock Alert
-        $outOfStock = $this->all(
-            "SELECT medicine_id, medicine_name, unit
-             FROM medicines
-             WHERE quantity <= 0
-             ORDER BY medicine_name ASC LIMIT 5"
-        );
+        $outOfStock = $userId
+            ? $this->all("SELECT medicine_id, medicine_name, unit FROM medicines WHERE quantity <= 0 AND user_id = ? ORDER BY medicine_name ASC LIMIT 5", "i", [$userId])
+            : $this->all("SELECT medicine_id, medicine_name, unit FROM medicines WHERE quantity <= 0 ORDER BY medicine_name ASC LIMIT 5");
         foreach ($outOfStock as $m) {
             $notifications[] = [
                 "id"       => "out_" . $m["medicine_id"],
@@ -91,14 +79,9 @@ class Notification extends Model
         }
 
         // 4. Low Stock Alert (quantity > 0 and < LOW_STOCK_THRESHOLD)
-        $lowStock = $this->all(
-            "SELECT medicine_id, medicine_name, quantity, unit
-             FROM medicines
-             WHERE quantity > 0 AND quantity < ?
-             ORDER BY quantity ASC LIMIT 5",
-            "i",
-            [LOW_STOCK_THRESHOLD]
-        );
+        $lowStock = $userId
+            ? $this->all("SELECT medicine_id, medicine_name, quantity, unit FROM medicines WHERE quantity > 0 AND quantity < ? AND user_id = ? ORDER BY quantity ASC LIMIT 5", "ii", [LOW_STOCK_THRESHOLD, $userId])
+            : $this->all("SELECT medicine_id, medicine_name, quantity, unit FROM medicines WHERE quantity > 0 AND quantity < ? ORDER BY quantity ASC LIMIT 5", "i", [LOW_STOCK_THRESHOLD]);
         foreach ($lowStock as $m) {
             $notifications[] = [
                 "id"       => "low_" . $m["medicine_id"],
@@ -116,14 +99,9 @@ class Notification extends Model
 
         // 5. Recent System Actions from audit_logs
         try {
-            $recentLogs = $this->all(
-                "SELECT log_id, username, action, details, created_at
-                 FROM audit_logs
-                 ORDER BY created_at DESC, log_id DESC
-                 LIMIT ?",
-                "i",
-                [$limitRecent]
-            );
+            $recentLogs = $userId
+                ? $this->all("SELECT log_id, username, action, details, created_at FROM audit_logs WHERE user_id = ? ORDER BY created_at DESC, log_id DESC LIMIT ?", "ii", [$userId, $limitRecent])
+                : $this->all("SELECT log_id, username, action, details, created_at FROM audit_logs ORDER BY created_at DESC, log_id DESC LIMIT ?", "i", [$limitRecent]);
             foreach ($recentLogs as $log) {
                 $icon = "bi-activity";
                 $type = "secondary";

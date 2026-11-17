@@ -40,27 +40,52 @@ class Medicine extends Model
     // READING
     // =================================================================
 
-    public function find(int $id): ?array
+    public function find(int $id, ?int $userId = null): ?array
     {
+        $userId = $userId ?? current_user_id();
+        if ($userId) {
+            return $this->one("SELECT * FROM medicines WHERE medicine_id = ? AND user_id = ?", "ii", [$id, $userId]);
+        }
         return $this->one("SELECT * FROM medicines WHERE medicine_id = ?", "i", [$id]);
     }
 
     // All categories / suppliers in use, A–Z (filters and form suggestions)
-    public function categories(): array
+    public function categories(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        if ($userId) {
+            return array_column($this->all("SELECT DISTINCT category FROM medicines WHERE category <> '' AND user_id = ? ORDER BY category", "i", [$userId]), "category");
+        }
         return array_column($this->all("SELECT DISTINCT category FROM medicines WHERE category <> '' ORDER BY category"), "category");
     }
 
-    public function suppliers(): array
+    public function suppliers(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        if ($userId) {
+            return array_column($this->all(
+                "SELECT DISTINCT supplier FROM medicines WHERE supplier IS NOT NULL AND supplier <> '' AND user_id = ? ORDER BY supplier",
+                "i",
+                [$userId]
+            ), "supplier");
+        }
         return array_column($this->all(
             "SELECT DISTINCT supplier FROM medicines WHERE supplier IS NOT NULL AND supplier <> '' ORDER BY supplier"
         ), "supplier");
     }
 
     // Short list for the Stock page dropdown
-    public function allForSelect(): array
+    public function allForSelect(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        if ($userId) {
+            return $this->all(
+                "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
+                 FROM medicines WHERE user_id = ? ORDER BY medicine_name ASC, expiry_date ASC",
+                "i",
+                [$userId]
+            );
+        }
         return $this->all(
             "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
              FROM medicines ORDER BY medicine_name ASC, expiry_date ASC"
@@ -70,13 +95,20 @@ class Medicine extends Model
     // Search + filter + sort + one page of results (Products page).
     //   $f = ["search", "type", "category", "stock", "expiry"]
     // Returns ["rows", "total", "page", "pages", "offset"]
-    public function paginate(array $f, string $sort, string $dir, int $perPage, int $page): array
+    public function paginate(array $f, string $sort, string $dir, int $perPage, int $page, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
         $low  = LOW_STOCK_THRESHOLD;
         $days = EXPIRY_WARNING_DAYS;
         $where = [];
         $types = "";
         $vals  = [];
+
+        if ($userId) {
+            $where[] = "user_id = ?";
+            $types .= "i";
+            $vals[] = $userId;
+        }
 
         if ($f["search"] !== "") {
             $where[] = "(medicine_name LIKE ? OR brand LIKE ? OR batch_number LIKE ? OR supplier LIKE ?)";
@@ -143,8 +175,13 @@ class Medicine extends Model
     // DASHBOARD
     // =================================================================
 
-    public function dashboardStats(): array
+    public function dashboardStats(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "WHERE user_id = ?" : "";
+        $types = $userId ? "iii" : "ii";
+        $vals = $userId ? [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, $userId] : [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS];
+
         return $this->one(
             "SELECT COUNT(*) AS total_medicines,
                     COALESCE(SUM(CASE WHEN expiry_date IS NULL OR expiry_date >= CURDATE() THEN quantity ELSE 0 END), 0) AS available_units,
@@ -152,17 +189,22 @@ class Medicine extends Model
                     COALESCE(SUM(quantity <= 0), 0) AS out_count,
                     COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
                     COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired_count
-             FROM medicines",
-            "ii",
-            [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS]
+             FROM medicines $userWhere",
+            $types,
+            $vals
         );
     }
 
     // Number of products of each type, in the order of TYPES (types with none are left out)
-    public function typeCounts(): array
+    public function typeCounts(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "WHERE user_id = ?" : "";
+        $types = $userId ? "i" : "";
+        $vals = $userId ? [$userId] : [];
+
         $counts = array_column(
-            $this->all("SELECT product_type, COUNT(*) AS c FROM medicines GROUP BY product_type"),
+            $this->all("SELECT product_type, COUNT(*) AS c FROM medicines $userWhere GROUP BY product_type", $types, $vals),
             "c", "product_type"
         );
         $ordered = [];
@@ -175,36 +217,51 @@ class Medicine extends Model
     }
 
     // Low + out of stock, lowest first
-    public function needsRestock(int $limit): array
+    public function needsRestock(int $limit, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "AND user_id = ?" : "";
+        $types = $userId ? "iii" : "ii";
+        $vals = $userId ? [LOW_STOCK_THRESHOLD, $userId, $limit] : [LOW_STOCK_THRESHOLD, $limit];
+
         return $this->all(
             "SELECT medicine_id, medicine_name, category, quantity, unit
-             FROM medicines WHERE quantity < ?
+             FROM medicines WHERE quantity < ? $userWhere
              ORDER BY quantity ASC, medicine_name ASC LIMIT ?",
-            "ii",
-            [LOW_STOCK_THRESHOLD, $limit]
+            $types,
+            $vals
         );
     }
 
     // Expired + expiring within the warning window, earliest first
-    public function expiringSoon(int $limit): array
+    public function expiringSoon(int $limit, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "AND user_id = ?" : "";
+        $types = $userId ? "iii" : "ii";
+        $vals = $userId ? [EXPIRY_WARNING_DAYS, $userId, $limit] : [EXPIRY_WARNING_DAYS, $limit];
+
         return $this->all(
             "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
-             FROM medicines WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+             FROM medicines WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) $userWhere
              ORDER BY expiry_date ASC, medicine_name ASC LIMIT ?",
-            "ii",
-            [EXPIRY_WARNING_DAYS, $limit]
+            $types,
+            $vals
         );
     }
 
-    public function recentlyAdded(int $limit): array
+    public function recentlyAdded(int $limit, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "WHERE user_id = ?" : "";
+        $types = $userId ? "ii" : "i";
+        $vals = $userId ? [$userId, $limit] : [$limit];
+
         return $this->all(
             "SELECT medicine_id, medicine_name, product_type, category, quantity, unit, date_added
-             FROM medicines ORDER BY date_added DESC, medicine_id DESC LIMIT ?",
-            "i",
-            [$limit]
+             FROM medicines $userWhere ORDER BY date_added DESC, medicine_id DESC LIMIT ?",
+            $types,
+            $vals
         );
     }
 
@@ -215,39 +272,56 @@ class Medicine extends Model
 
     // Products with stock that are expired or expire within the critical window
     // (the red number on the sidebar)
-    public function countUrgentExpiry(): int
+    public function countUrgentExpiry(?int $userId = null): int
     {
+        $userId = $userId ?? current_user_id();
         $critical = min(EXPIRY_CRITICAL_DAYS, EXPIRY_WARNING_DAYS);
+        $userWhere = $userId ? "AND user_id = ?" : "";
+        $types = $userId ? "ii" : "i";
+        $vals = $userId ? [$critical, $userId] : [$critical];
+
         return (int) $this->one(
             "SELECT COUNT(*) AS c FROM medicines
-             WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)",
-            "i",
-            [$critical]
+             WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) $userWhere",
+            $types,
+            $vals
         )["c"];
     }
 
     // Counts for the Expiry page tabs (active tabs monitor products currently in stock)
-    public function expiryCounts(int $criticalDays, int $warnDays): array
+    public function expiryCounts(int $criticalDays, int $warnDays, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "WHERE user_id = ?" : "";
+        $types = $userId ? "iiii" : "iii";
+        $vals = $userId ? [$criticalDays, $criticalDays, $warnDays, $userId] : [$criticalDays, $criticalDays, $warnDays];
+
         return $this->one(
             "SELECT COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired,
                     COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
                     COALESCE(SUM(quantity > 0 AND expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
                     COALESCE(SUM(expiry_date IS NOT NULL), 0) AS total
-             FROM medicines",
-            "iii",
-            [$criticalDays, $criticalDays, $warnDays]
+             FROM medicines $userWhere",
+            $types,
+            $vals
         );
     }
 
     // One page of the Expiry list, soonest expiry first.
     //   $status: attention | expired | critical | soon | all
     // Products without an expiry date are never listed.
-    public function expiryList(string $status, string $search, string $category, int $criticalDays, int $warnDays, int $perPage, int $page): array
+    public function expiryList(string $status, string $search, string $category, int $criticalDays, int $warnDays, int $perPage, int $page, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
         $where = ["expiry_date IS NOT NULL"];
         $types = "";
         $vals  = [];
+
+        if ($userId) {
+            $where[] = "user_id = ?";
+            $types .= "i";
+            $vals[] = $userId;
+        }
 
         if ($status !== "all") {
             $where[] = "quantity > 0";
@@ -373,10 +447,16 @@ class Medicine extends Model
 
         // Duplicate: same product name + same batch number
         if (!isset($errors["medicine_name"]) && $d["batch_number"] !== "") {
+            $userCheck = current_user_id() ? "AND user_id = ?" : "";
+            $types = current_user_id() ? "ssii" : "ssi";
+            $vals = current_user_id()
+                ? [$d["medicine_name"], $d["batch_number"], $excludeId, current_user_id()]
+                : [$d["medicine_name"], $d["batch_number"], $excludeId];
+
             $dup = $this->one(
-                "SELECT medicine_id FROM medicines WHERE medicine_name = ? AND batch_number = ? AND medicine_id <> ? LIMIT 1",
-                "ssi",
-                [$d["medicine_name"], $d["batch_number"], $excludeId]
+                "SELECT medicine_id FROM medicines WHERE medicine_name = ? AND batch_number = ? AND medicine_id <> ? $userCheck LIMIT 1",
+                $types,
+                $vals
             );
             if ($dup) {
                 $errors["batch_number"] = "This product with batch \"" . $d["batch_number"] . "\" already exists (ID #" . $dup["medicine_id"] . ").";
@@ -396,15 +476,16 @@ class Medicine extends Model
     // Add a product and record its starting stock. Returns the new ID.
     public function create(array $d, ?int $userId): int
     {
+        $userId = $userId ?? current_user_id();
         $v = $this->dbValues($d);
         $this->db->begin_transaction();
         try {
             $this->exec(
                 "INSERT INTO medicines
-                    (medicine_name, product_type, requires_rx, category, description, brand, batch_number, quantity, unit, unit_price, expiry_date, supplier)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                "ssissssissss",
-                [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"]]
+                    (user_id, medicine_name, product_type, requires_rx, category, description, brand, batch_number, quantity, unit, unit_price, expiry_date, supplier)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "ississssissss",
+                [$userId, $v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"]]
             );
             $id = (int) $this->db->insert_id;
 
@@ -423,25 +504,41 @@ class Medicine extends Model
     // or null if the product no longer exists.
     public function update(int $id, array $d, ?int $userId): ?array
     {
+        $userId = $userId ?? current_user_id();
         $v = $this->dbValues($d);
         $this->db->begin_transaction();
         try {
             // Lock the row while we change it
-            $current = $this->one("SELECT quantity FROM medicines WHERE medicine_id = ? FOR UPDATE", "i", [$id]);
+            $current = $userId
+                ? $this->one("SELECT quantity FROM medicines WHERE medicine_id = ? AND user_id = ? FOR UPDATE", "ii", [$id, $userId])
+                : $this->one("SELECT quantity FROM medicines WHERE medicine_id = ? FOR UPDATE", "i", [$id]);
             if (!$current) {
                 $this->db->rollback();
                 return null;
             }
             $before = (int) $current["quantity"];
 
-            $this->exec(
-                "UPDATE medicines SET
-                    medicine_name = ?, product_type = ?, requires_rx = ?, category = ?, description = ?, brand = ?, batch_number = ?,
-                    quantity = ?, unit = ?, unit_price = ?, expiry_date = ?, supplier = ?
-                 WHERE medicine_id = ?",
-                "ssissssissssi",
-                [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"], $id]
-            );
+            $userWhere = $userId ? "AND user_id = ?" : "";
+            $types = $userId ? "ssissssissssi" : "ssissssissssi"; // wait, need extra parameter if userWhere
+            if ($userId) {
+                $this->exec(
+                    "UPDATE medicines SET
+                        medicine_name = ?, product_type = ?, requires_rx = ?, category = ?, description = ?, brand = ?, batch_number = ?,
+                        quantity = ?, unit = ?, unit_price = ?, expiry_date = ?, supplier = ?
+                     WHERE medicine_id = ? AND user_id = ?",
+                    "ssissssissssii",
+                    [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"], $id, $userId]
+                );
+            } else {
+                $this->exec(
+                    "UPDATE medicines SET
+                        medicine_name = ?, product_type = ?, requires_rx = ?, category = ?, description = ?, brand = ?, batch_number = ?,
+                        quantity = ?, unit = ?, unit_price = ?, expiry_date = ?, supplier = ?
+                     WHERE medicine_id = ?",
+                    "ssissssissssi",
+                    [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"], $id]
+                );
+            }
 
             if ($v["quantity"] !== $before) {
                 (new StockMovement($this->db))->log($id, $v["name"], "adjust", $before, $v["quantity"], "Quantity corrected in Edit Product", $userId);
@@ -456,13 +553,20 @@ class Medicine extends Model
 
     // Delete a product. Its stock history is kept (medicine_id becomes empty).
     // Returns the deleted product's name, or null if it was not found.
-    public function delete(int $id): ?string
+    public function delete(int $id, ?int $userId = null): ?string
     {
-        $row = $this->one("SELECT medicine_name FROM medicines WHERE medicine_id = ?", "i", [$id]);
+        $userId = $userId ?? current_user_id();
+        $row = $userId
+            ? $this->one("SELECT medicine_name FROM medicines WHERE medicine_id = ? AND user_id = ?", "ii", [$id, $userId])
+            : $this->one("SELECT medicine_name FROM medicines WHERE medicine_id = ?", "i", [$id]);
         if (!$row) {
             return null;
         }
-        $this->exec("DELETE FROM medicines WHERE medicine_id = ?", "i", [$id]);
+        if ($userId) {
+            $this->exec("DELETE FROM medicines WHERE medicine_id = ? AND user_id = ?", "ii", [$id, $userId]);
+        } else {
+            $this->exec("DELETE FROM medicines WHERE medicine_id = ?", "i", [$id]);
+        }
         return $row["medicine_name"];
     }
 
@@ -474,13 +578,12 @@ class Medicine extends Model
     // Returns ["error" => "..."] or ["name", "unit", "before", "after"].
     public function changeStock(int $id, string $type, int $qty, string $note, ?int $userId): array
     {
+        $userId = $userId ?? current_user_id();
         $this->db->begin_transaction();
         try {
-            $med = $this->one(
-                "SELECT medicine_id, medicine_name, quantity, unit, expiry_date FROM medicines WHERE medicine_id = ? FOR UPDATE",
-                "i",
-                [$id]
-            );
+            $med = $userId
+                ? $this->one("SELECT medicine_id, medicine_name, quantity, unit, expiry_date FROM medicines WHERE medicine_id = ? AND user_id = ? FOR UPDATE", "ii", [$id, $userId])
+                : $this->one("SELECT medicine_id, medicine_name, quantity, unit, expiry_date FROM medicines WHERE medicine_id = ? FOR UPDATE", "i", [$id]);
             if (!$med) {
                 $this->db->rollback();
                 return ["error" => "That product no longer exists.", "missing" => true];

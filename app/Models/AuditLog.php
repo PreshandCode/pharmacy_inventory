@@ -33,11 +33,18 @@ class AuditLog extends Model
     /**
      * Paginated list of audit logs, newest first.
      */
-    public function paginate(string $actionFilter, string $search, int $perPage, int $page): array
+    public function paginate(string $actionFilter, string $search, int $perPage, int $page, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
         $where  = [];
         $types  = "";
         $vals   = [];
+
+        if ($userId) {
+            $where[] = "a.user_id = ?";
+            $types  .= "i";
+            $vals[]  = $userId;
+        }
 
         if ($actionFilter !== "") {
             $where[] = "a.action = ?";
@@ -80,11 +87,16 @@ class AuditLog extends Model
     /**
      * Distinct action values for the filter dropdown.
      */
-    public function actions(): array
+    public function actions(?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $where = $userId ? "WHERE user_id = ?" : "";
+        $types = $userId ? "i" : "";
+        $vals = $userId ? [$userId] : [];
+
         try {
             return array_column(
-                $this->all("SELECT DISTINCT action FROM audit_logs ORDER BY action"),
+                $this->all("SELECT DISTINCT action FROM audit_logs $where ORDER BY action", $types, $vals),
                 "action"
             );
         } catch (\mysqli_sql_exception $e) {

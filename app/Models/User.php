@@ -36,6 +36,12 @@ class User extends Model
         );
     }
 
+    public function existsByUsername(string $username): bool
+    {
+        $row = $this->one("SELECT user_id FROM users WHERE username = ?", "s", [$username]);
+        return $row !== null;
+    }
+
     public function passwordHash(int $userId): ?string
     {
         $row = $this->one("SELECT password_hash FROM users WHERE user_id = ?", "i", [$userId]);

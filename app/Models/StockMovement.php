@@ -47,15 +47,22 @@ class StockMovement extends Model
 
     // Units added / removed per month since $startDate.
     // Returns ["2026-11" => ["in" => 50, "out" => 20], ...]
-    public function monthlyTotals(string $startDate): array
+    public function monthlyTotals(string $startDate, ?int $userId = null): array
     {
+        $userId = $userId ?? current_user_id();
+        $userWhere = $userId ? "AND (sm.user_id = ? OR m.user_id = ?)" : "";
+        $types = $userId ? "sii" : "s";
+        $vals = $userId ? [$startDate, $userId, $userId] : [$startDate];
+
         $rows = $this->all(
-            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym,
-                    SUM(GREATEST(quantity_after - quantity_before, 0)) AS units_in,
-                    SUM(GREATEST(quantity_before - quantity_after, 0)) AS units_out
-             FROM stock_movements WHERE created_at >= ? GROUP BY ym",
-            "s",
-            [$startDate]
+            "SELECT DATE_FORMAT(sm.created_at, '%Y-%m') AS ym,
+                    SUM(GREATEST(sm.quantity_after - sm.quantity_before, 0)) AS units_in,
+                    SUM(GREATEST(sm.quantity_before - sm.quantity_after, 0)) AS units_out
+             FROM stock_movements sm
+             LEFT JOIN medicines m ON m.medicine_id = sm.medicine_id
+             WHERE sm.created_at >= ? $userWhere GROUP BY ym",
+            $types,
+            $vals
         );
         $totals = [];
         foreach ($rows as $r) {
@@ -65,19 +72,41 @@ class StockMovement extends Model
     }
 
     // One page of the full history, newest first.  $type: "", "in", "out" or "adjust"
-    public function paginate(string $type, int $perPage, int $page): array
+    public function paginate(string $type, int $perPage, int $page, ?int $userId = null): array
     {
-        $where  = $type !== "" ? "WHERE sm.movement_type = ?" : "";
-        $types  = $type !== "" ? "s" : "";
-        $values = $type !== "" ? [$type] : [];
+        $userId = $userId ?? current_user_id();
+        $whereClauses = [];
+        $types = "";
+        $values = [];
 
-        $total = (int) $this->one("SELECT COUNT(*) AS c FROM stock_movements sm $where", $types, $values)["c"];
+        if ($type !== "") {
+            $whereClauses[] = "sm.movement_type = ?";
+            $types .= "s";
+            $values[] = $type;
+        }
+        if ($userId) {
+            $whereClauses[] = "(sm.user_id = ? OR m.user_id = ?)";
+            $types .= "ii";
+            $values[] = $userId;
+            $values[] = $userId;
+        }
+        $where = $whereClauses ? "WHERE " . implode(" AND ", $whereClauses) : "";
+
+        $total = (int) $this->one(
+            "SELECT COUNT(*) AS c
+             FROM stock_movements sm
+             LEFT JOIN medicines m ON m.medicine_id = sm.medicine_id
+             $where",
+            $types,
+            $values
+        )["c"];
         $pages = max(1, (int) ceil($total / $perPage));
         $page  = min(max(1, $page), $pages);
 
         $rows = $this->all(
             "SELECT sm.*, u.full_name
              FROM stock_movements sm
+             LEFT JOIN medicines m ON m.medicine_id = sm.medicine_id
              LEFT JOIN users u ON u.user_id = sm.user_id
              $where
              ORDER BY sm.created_at DESC, sm.movement_id DESC

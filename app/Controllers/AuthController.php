@@ -171,4 +171,66 @@ class AuthController extends Controller
             "username"  => $username,
         ], "auth");
     }
+
+    // -----------------------------------------------------------------
+    // USER REGISTRATION (Create new account)
+    // -----------------------------------------------------------------
+    public function register(): void
+    {
+        $users = new User($this->db);
+
+        if (is_logged_in()) {
+            redirect("dashboard.php");
+        }
+
+        $errors   = [];
+        $fullName = "";
+        $username = "";
+
+        if ($this->isPost()) {
+            csrf_check("register.php");
+
+            $fullName = $this->input("full_name");
+            $username = strtolower($this->input("username"));
+            $password = (string) ($_POST["password"] ?? "");
+            $confirm  = (string) ($_POST["confirm_password"] ?? "");
+
+            if ($fullName === "" || mb_strlen($fullName) > 100) {
+                $errors[] = "Please enter your full name or pharmacy name (up to 100 characters).";
+            }
+            if (!preg_match('/^[a-z0-9._]{3,50}$/', $username)) {
+                $errors[] = "Username must be 3–50 characters: letters, numbers, dot or underscore.";
+            } elseif ($users->existsByUsername($username)) {
+                $errors[] = "The username \"" . e($username) . "\" is already taken. Please choose another.";
+            }
+            if (strlen($password) < MIN_PASSWORD_LENGTH) {
+                $errors[] = "Password must be at least " . MIN_PASSWORD_LENGTH . " characters.";
+            }
+            if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+                $errors[] = "Password must contain at least one letter and one number.";
+            }
+            if ($password !== $confirm) {
+                $errors[] = "The two passwords do not match.";
+            }
+
+            if (!$errors) {
+                $role = "admin"; // Each account is admin of their own inventory
+                $newId = $users->create($username, $fullName, $password, $role);
+                $userData = ["user_id" => $newId, "username" => $username, "full_name" => $fullName, "role" => $role];
+                login_user($userData);
+                $users->touchLastLogin($newId);
+                (new AuditLog($this->db))->log("Register", "New account registered: " . $username . " (" . $fullName . ")", $newId, $username, $this->clientIp());
+
+                flash("success", "Welcome, " . $fullName . "! Your account has been created.");
+                redirect("dashboard.php");
+            }
+        }
+
+        $this->view("auth/register", [
+            "pageTitle" => "Create account",
+            "errors"    => $errors,
+            "fullName"  => $fullName,
+            "username"  => $username,
+        ], "auth");
+    }
 }

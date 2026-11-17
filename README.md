@@ -93,7 +93,8 @@ pharmacy_inventory/
 │   ├── upgrade.sql             Adds description, date_added, stock_movements, users
 │   ├── upgrade_2_products.sql  Adds product type, unit, Rx and optional expiry
 │   ├── upgrade_3_security.sql  Adds IP-based login lockout table + unique batch index
-│   └── upgrade_4_audit.sql     Adds audit_logs table + last_updated column
+│   ├── upgrade_4_audit.sql     Adds audit_logs table + last_updated column
+│   └── upgrade_5_multiuser.sql Adds user_id to medicines (account-based isolation)
 ├── dashboard.php, medicine.php, stock.php, expiry.php, …   Entry points (one per page)
 └── index.php                   Redirects to the dashboard
 ```
@@ -175,6 +176,8 @@ Three tables:
    Then run **`database/upgrade_3_security.sql`** (once). It adds IP-based login lockout tracking and a unique index on medicine name + batch number.
 
    Then run **`database/upgrade_4_audit.sql`** (once). It creates the `audit_logs` table for tracking system actions and adds `last_updated` on medicines.
+
+   Then run **`database/upgrade_5_multiuser.sql`** (once). It adds `user_id` to medicines, turning the system into an account-based inventory where each user manages their own products.
 
 4. **Create `config/db_local.php`** (this file is ignored by Git and only used on `localhost`):
 
