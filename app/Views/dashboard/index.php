@@ -5,14 +5,14 @@
         <p><?php echo e(date("l, F j, Y")); ?></p>
     </div>
     <div class="page-actions">
-        <a href="add_medicine.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add medicine</a>
+        <a href="add_medicine.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add product</a>
     </div>
 </div>
 
 <!-- ============================ KEY NUMBERS ============================ -->
 <div class="stats section">
     <a href="medicine.php" class="stat">
-        <div class="stat-label">Medicines</div>
+        <div class="stat-label">Products</div>
         <div class="stat-value num"><?php echo number_format((int) $stats["total_medicines"]); ?></div>
     </a>
     <a href="medicine.php?stock=in" class="stat">
@@ -53,7 +53,7 @@
                     <li>
                         <div class="grow">
                             <a href="view_medicine.php?id=<?php echo (int) $m["medicine_id"]; ?>" class="title"><?php echo e($m["medicine_name"]); ?></a>
-                            <?php echo status_badge(stock_status($m["quantity"]), number_format((int) $m["quantity"]) . " left"); ?>
+                            <?php echo status_badge(stock_status($m["quantity"]), qty_unit($m["quantity"], $m["unit"]) . " left"); ?>
                         </div>
                         <a href="stock.php?id=<?php echo (int) $m["medicine_id"]; ?>" class="btn btn-light btn-sm">Restock</a>
                     </li>
@@ -76,7 +76,7 @@
                     <li>
                         <div class="grow">
                             <a href="view_medicine.php?id=<?php echo (int) $m["medicine_id"]; ?>" class="title"><?php echo e($m["medicine_name"]); ?></a>
-                            <span class="sub"><?php echo $m["batch_number"] ? "Batch " . e($m["batch_number"]) . " · " : ""; ?><?php echo number_format((int) $m["quantity"]); ?> units</span>
+                            <span class="sub"><?php echo $m["batch_number"] ? "Batch " . e($m["batch_number"]) . " · " : ""; ?><?php echo e(qty_unit($m["quantity"], $m["unit"])); ?></span>
                         </div>
                         <div class="end">
                             <div class="num"><?php echo e(format_date($m["expiry_date"])); ?></div>
@@ -92,7 +92,7 @@
 <!-- ===================== ACTIVITY + RECENTLY ADDED ===================== -->
 <div class="grid-main">
 
-    <div class="card">
+    <div class="card align-self-start">
         <div class="card-head">
             <h2>Stock activity</h2>
             <div class="legend" aria-hidden="true">
@@ -119,26 +119,44 @@
         </div>
     </div>
 
+    <div class="d-flex flex-column gap-4 min-w-0">
     <div class="card">
         <div class="card-head">
             <h2>Recently added</h2>
             <a href="medicine.php?sort=added&amp;dir=desc">View all</a>
         </div>
         <?php if (!$recent) { ?>
-            <div class="empty"><strong>No medicines yet</strong><a href="add_medicine.php">Add your first medicine</a></div>
+            <div class="empty"><strong>No products yet</strong><a href="add_medicine.php">Add your first product</a></div>
         <?php } else { ?>
             <ul class="rows">
                 <?php foreach ($recent as $m) { ?>
                     <li>
                         <div class="grow">
                             <a href="view_medicine.php?id=<?php echo (int) $m["medicine_id"]; ?>" class="title"><?php echo e($m["medicine_name"]); ?></a>
-                            <span class="sub"><?php echo e($m["category"]); ?> · <?php echo e(format_date($m["date_added"])); ?></span>
+                            <span class="sub"><?php echo e($m["product_type"]); ?> · <?php echo e(format_date($m["date_added"])); ?></span>
                         </div>
-                        <div class="end num"><?php echo number_format((int) $m["quantity"]); ?></div>
+                        <div class="end num"><?php echo e(qty_unit($m["quantity"], $m["unit"])); ?></div>
                     </li>
                 <?php } ?>
             </ul>
         <?php } ?>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h2>Products by type</h2></div>
+        <?php if (!$typeCounts) { ?>
+            <div class="empty"><strong>No products yet</strong></div>
+        <?php } else { ?>
+            <ul class="rows">
+                <?php foreach ($typeCounts as $t => $count) { ?>
+                    <li>
+                        <div class="grow"><a href="<?php echo e(build_url("medicine.php", ["type" => $t])); ?>" class="title"><?php echo e($t); ?></a></div>
+                        <div class="end num"><?php echo number_format($count); ?></div>
+                    </li>
+                <?php } ?>
+            </ul>
+        <?php } ?>
+    </div>
     </div>
 </div>
 

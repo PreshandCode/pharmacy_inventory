@@ -38,6 +38,7 @@ class DashboardController extends Controller
             "expiring"     => $medicines->expiringSoon(5),
             "expiryTotal"  => (int) $stats["expired_count"] + (int) $stats["expiring_count"],
             "recent"       => $medicines->recentlyAdded(5),
+            "typeCounts"   => $medicines->typeCounts(),
             "months"       => $months,
             "hasActivity"  => array_sum(array_column($months, "in")) + array_sum(array_column($months, "out")) > 0,
             "chartData"    => [

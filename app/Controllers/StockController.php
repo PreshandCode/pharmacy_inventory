@@ -6,7 +6,7 @@
 //
 //  The safety rules (never below 0, no stock into an expired batch,
 //  row locking) are in Medicine::changeStock().
-//  stock.php?id=5 opens the page with medicine #5 already selected.
+//  stock.php?id=5 opens the page with product #5 already selected.
 // =====================================================================
 
 class StockController extends Controller
@@ -72,7 +72,7 @@ class StockController extends Controller
         // ---- Check the form ----
         $error = "";
         if ($medicineId <= 0) {
-            $error = "Please choose a medicine.";
+            $error = "Please choose a product.";
         } elseif (!isset($reasons[$type])) {
             $error = "Please choose Stock In, Stock Out or Set Quantity.";
         } elseif (!preg_match('/^\d+$/', $qtyText)) {
@@ -108,20 +108,21 @@ class StockController extends Controller
 
         // ---- Tell the user what happened ----
         $name   = "\"" . $result["name"] . "\"";
+        $unit   = $result["unit"];
         $before = $result["before"];
         $after  = $result["after"];
         if ($type === "in") {
-            flash("success", "Added " . number_format($qty) . " unit(s) to " . $name . ". New stock: " . number_format($after) . ".");
+            flash("success", "Added " . qty_unit($qty, $unit) . " to " . $name . ". New stock: " . qty_unit($after, $unit) . ".");
         } elseif ($type === "out") {
-            flash("success", "Removed " . number_format($qty) . " unit(s) from " . $name . ". New stock: " . number_format($after) . ".");
+            flash("success", "Removed " . qty_unit($qty, $unit) . " from " . $name . ". New stock: " . qty_unit($after, $unit) . ".");
         } else {
-            flash("success", "Stock of " . $name . " set from " . number_format($before) . " to " . number_format($after) . ".");
+            flash("success", "Stock of " . $name . " set from " . number_format($before) . " to " . qty_unit($after, $unit) . ".");
         }
 
         if ($after === 0) {
             flash("warning", $name . " is now OUT OF STOCK.");
         } elseif ($after < LOW_STOCK_THRESHOLD && $before >= LOW_STOCK_THRESHOLD) {
-            flash("warning", $name . " is now LOW on stock (" . number_format($after) . " left).");
+            flash("warning", $name . " is now LOW on stock (" . qty_unit($after, $unit) . " left).");
         }
 
         redirect("stock.php?id=" . $medicineId);

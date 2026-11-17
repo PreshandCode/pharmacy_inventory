@@ -89,7 +89,8 @@ pharmacy_inventory/
 │   ├── db_connect.php          Your real live connection - not in Git (see "Database credentials")
 │   └── db_local.php            Your XAMPP connection - not in Git
 ├── database/
-│   └── upgrade.sql             Adds the tables and columns the system needs
+│   ├── upgrade.sql             Adds the tables and columns the system needs
+│   └── upgrade_2_products.sql  Adds product type, unit, Rx and optional expiry
 ├── dashboard.php, medicine.php, stock.php, expiry.php, …   Entry points (one per page)
 └── index.php                   Redirects to the dashboard
 ```
@@ -131,7 +132,7 @@ Three tables:
 
 | Table | Contents |
 |---|---|
-| `medicines` | medicine_id, medicine_name, category, description, brand, batch_number, quantity, unit_price, expiry_date, supplier, date_added |
+| `medicines` | All products (the name is kept for compatibility): medicine_id, medicine_name, product_type, requires_rx, category, description, brand, batch_number, quantity, unit, unit_price, expiry_date (empty = no expiry), supplier, date_added |
 | `stock_movements` | Every stock change: medicine, type (in / out / adjust), quantity, before, after, note, user, date |
 | `users` | username, full_name, password_hash, role (admin / staff), created_at, last_login |
 
@@ -166,6 +167,8 @@ Three tables:
 
    Then run **`database/upgrade.sql`** (once). It adds the `description` and `date_added` columns and the `stock_movements` and `users` tables.
 
+   Then run **`database/upgrade_2_products.sql`** (once). It adds product type, unit and prescription (Rx), and makes the expiry date optional.
+
 4. **Create `config/db_local.php`** (this file is ignored by Git and only used on `localhost`):
 
    ```php
@@ -185,7 +188,7 @@ Three tables:
 ## Deployment (InfinityFree)
 
 1. In the InfinityFree control panel, create a MySQL database and note its host, username, password and database name.
-2. In **phpMyAdmin**, select the database and run the SQL from step 3 above (`CREATE TABLE` for a fresh install, then `database/upgrade.sql`).
+2. In **phpMyAdmin**, select the database and run the SQL from step 3 above (`CREATE TABLE` for a fresh install, then `database/upgrade.sql`, then `database/upgrade_2_products.sql`).
 3. Copy `config/db_connect.example.php` to `config/db_connect.php` and fill in your InfinityFree database details (see below).
 4. Upload the project into `htdocs`, including the `app/`, `includes/`, `config/` folders and the `.htaccess` files. Do **not** upload `config/db_local.php` or `config/db_connect.example.php`.
 5. Open your site and create the administrator account.

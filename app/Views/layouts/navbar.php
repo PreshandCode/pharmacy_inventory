@@ -15,12 +15,12 @@ $navUser = current_user();
 // [file, label, icon, other pages that also highlight this link]
 $navLinks = [
     ["dashboard.php", "Dashboard", "bi-house",          ["index.php"]],
-    ["medicine.php",  "Medicines", "bi-capsule",        ["add_medicine.php", "edit_medicine.php", "view_medicine.php"]],
+    ["medicine.php",  "Products",  "bi-capsule",        ["add_medicine.php", "edit_medicine.php", "view_medicine.php"]],
     ["stock.php",     "Stock",     "bi-box-seam",       []],
     ["expiry.php",    "Expiry",    "bi-calendar2-x",    []],
 ];
 
-// Number on the "Expiry" link: medicines with stock that are expired or expire very soon
+// Number on the "Expiry" link: products with stock that are expired or expire very soon
 $navBadges = ["expiry.php" => (int) ($navExpiryCount ?? 0)];
 ?>
 

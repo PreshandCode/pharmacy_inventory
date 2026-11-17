@@ -1,7 +1,8 @@
 <?php
 // =====================================================================
 //  EXPIRY CONTROLLER  (page: expiry.php)
-//  Medicines that are expired or expiring soon, with status tabs,
+//  Products that are expired or expiring soon (products without an
+//  expiry date are left out), with status tabs,
 //  search and category filter.
 // =====================================================================
 

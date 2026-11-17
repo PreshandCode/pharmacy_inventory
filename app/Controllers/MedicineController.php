@@ -1,6 +1,6 @@
 <?php
 // =====================================================================
-//  MEDICINE CONTROLLER
+//  PRODUCT CONTROLLER  (the page addresses keep their old "medicine" names)
 //    index()   medicine.php          list with search / filters / sorting / pages
 //    show()    view_medicine.php     details + stock history
 //    create()  add_medicine.php      add form (GET) and save (POST)
@@ -35,6 +35,7 @@ class MedicineController extends Controller
 
         // Read filters from the address bar - only allowed values are used
         $search   = mb_substr($this->query("search"), 0, 100);
+        $type     = in_array($this->query("type"), Medicine::TYPES, true) ? $this->query("type") : "";
         $category = mb_substr($this->query("category"), 0, 50);
         $stock    = array_key_exists($this->query("stock"), $stockOptions) ? $this->query("stock") : "";
         $expiry   = array_key_exists($this->query("expiry"), $expiryOptions) ? $this->query("expiry") : "";
@@ -44,13 +45,14 @@ class MedicineController extends Controller
 
         $model  = new Medicine($this->db);
         $result = $model->paginate(
-            ["search" => $search, "category" => $category, "stock" => $stock, "expiry" => $expiry],
+            ["search" => $search, "type" => $type, "category" => $category, "stock" => $stock, "expiry" => $expiry],
             $sort, $dir, $perPage, (int) $this->query("page", "1")
         );
 
         // Current filters, used to build links (sorting, pages, clear)
         $params = [
             "search"   => $search,
+            "type"     => $type,
             "category" => $category,
             "stock"    => $stock,
             "expiry"   => $expiry,
@@ -60,13 +62,15 @@ class MedicineController extends Controller
         ];
 
         $this->view("medicines/index", [
-            "pageTitle"     => "Medicines",
+            "pageTitle"     => "Products",
             "medicines"     => $result["rows"],
             "totalRows"     => $result["total"],
             "page"          => $result["page"],
             "totalPages"    => $result["pages"],
             "offset"        => $result["offset"],
             "categories"    => $model->categories(),
+            "types"         => Medicine::TYPES,
+            "type"          => $type,
             "stockOptions"  => $stockOptions,
             "expiryOptions" => $expiryOptions,
             "search"        => $search,
@@ -76,7 +80,7 @@ class MedicineController extends Controller
             "sort"          => $sort,
             "dir"           => $dir,
             "params"        => $params,
-            "hasFilters"    => $search !== "" || $category !== "" || $stock !== "" || $expiry !== "",
+            "hasFilters"    => $search !== "" || $type !== "" || $category !== "" || $stock !== "" || $expiry !== "",
             // This page's address, to come back here after deleting
             "returnUrl"     => build_url("medicine.php", $params + ["page" => $result["page"] > 1 ? $result["page"] : ""]),
         ]);
@@ -91,7 +95,7 @@ class MedicineController extends Controller
         $med = $this->findOrRedirect($id);
 
         $this->view("medicines/show", [
-            "pageTitle"    => "Medicine details",
+            "pageTitle"    => "Product details",
             "id"           => $id,
             "med"          => $med,
             "st"           => stock_status($med["quantity"]),
@@ -112,6 +116,7 @@ class MedicineController extends Controller
         $errors = [];
         $form   = array_fill_keys(Medicine::FIELDS, "");
         $form["quantity"] = "0";
+        $form["product_type"] = "Medicine";
 
         if ($this->isPost()) {
             csrf_check("add_medicine.php");
@@ -128,7 +133,7 @@ class MedicineController extends Controller
         }
 
         $this->view("medicines/create", [
-            "pageTitle"  => "Add medicine",
+            "pageTitle"  => "Add product",
             "mode"       => "add",
             "form"       => $form,
             "errors"     => $errors,
@@ -153,18 +158,21 @@ class MedicineController extends Controller
 
         $form = $old ?: [
             "medicine_name" => $medicine["medicine_name"],
+            "product_type"  => $medicine["product_type"],
+            "requires_rx"   => $medicine["requires_rx"] ? "1" : "",
             "category"      => $medicine["category"],
             "brand"         => $medicine["brand"] ?? "",
             "batch_number"  => $medicine["batch_number"] ?? "",
             "description"   => $medicine["description"] ?? "",
             "quantity"      => (string) $medicine["quantity"],
+            "unit"          => $medicine["unit"] ?? "",
             "unit_price"    => $medicine["unit_price"],
-            "expiry_date"   => $medicine["expiry_date"],
+            "expiry_date"   => $medicine["expiry_date"] ?? "",
             "supplier"      => $medicine["supplier"] ?? "",
         ];
 
         $this->view("medicines/edit", [
-            "pageTitle"  => "Edit medicine",
+            "pageTitle"  => "Edit product",
             "mode"       => "edit",
             "id"         => $id,
             "medicine"   => $medicine,
@@ -187,7 +195,7 @@ class MedicineController extends Controller
         csrf_check($backToForm);
 
         if ($id <= 0) {
-            flash("error", "Invalid medicine ID.");
+            flash("error", "Invalid product ID.");
             redirect("medicine.php");
         }
 
@@ -204,13 +212,13 @@ class MedicineController extends Controller
 
         $result = $model->update($id, $form, current_user_id());
         if ($result === null) {
-            flash("error", "Medicine not found. It may have been deleted.");
+            flash("error", "Product not found. It may have been deleted.");
             redirect("medicine.php");
         }
 
         $msg = "\"" . $form["medicine_name"] . "\" was updated.";
         if ($result["before"] !== $result["after"]) {
-            $msg .= " Quantity changed from " . number_format($result["before"]) . " to " . number_format($result["after"]) . ".";
+            $msg .= " Quantity changed from " . number_format($result["before"]) . " to " . qty_unit($result["after"], $form["unit"]) . ".";
         }
         flash("success", $msg);
         redirect("view_medicine.php?id=" . $id);
@@ -227,13 +235,13 @@ class MedicineController extends Controller
 
         $id = (int) $this->input("id");
         if ($id <= 0) {
-            flash("error", "Invalid medicine ID.");
+            flash("error", "Invalid product ID.");
             redirect("medicine.php");
         }
 
         $name = (new Medicine($this->db))->delete($id);
         if ($name === null) {
-            flash("error", "That medicine no longer exists.");
+            flash("error", "That product no longer exists.");
             redirect("medicine.php");
         }
 
@@ -249,7 +257,7 @@ class MedicineController extends Controller
     // Helpers
     // -----------------------------------------------------------------
 
-    // The medicine form fields from $_POST
+    // The product form fields from $_POST
     private function formInput(): array
     {
         $form = [];
@@ -263,7 +271,7 @@ class MedicineController extends Controller
     {
         $id = (int) $this->query("id");
         if ($id <= 0) {
-            flash("error", "Invalid medicine ID.");
+            flash("error", "Invalid product ID.");
             redirect("medicine.php");
         }
         return $id;
@@ -273,7 +281,7 @@ class MedicineController extends Controller
     {
         $med = (new Medicine($this->db))->find($id);
         if (!$med) {
-            flash("error", "Medicine not found. It may have been deleted.");
+            flash("error", "Product not found. It may have been deleted.");
             redirect("medicine.php");
         }
         return $med;

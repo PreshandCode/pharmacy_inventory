@@ -1,6 +1,6 @@
 <?php
 // =====================================================================
-//  MEDICINE FORM - shared by add_medicine.php and edit_medicine.php
+//  PRODUCT FORM - shared by add_medicine.php and edit_medicine.php
 //
 //  Variables the page sets before including this file:
 //    $mode        "add" or "edit"
@@ -39,11 +39,21 @@ $feedback = function (string $field, string $default) use ($errors): string {
 
     <div class="row g-3">
         <div class="col-md-8">
-            <label for="medicine_name" class="form-label">Medicine name <span class="req">*</span></label>
+            <label for="medicine_name" class="form-label">Product name <span class="req">*</span></label>
             <input type="text" id="medicine_name" name="medicine_name" class="form-control<?php echo $invalid("medicine_name"); ?>"
                    maxlength="100" required autofocus placeholder="e.g. Amoxicillin 500mg"
                    value="<?php echo e($form["medicine_name"]); ?>">
-            <?php echo $feedback("medicine_name", "Enter the medicine name."); ?>
+            <?php echo $feedback("medicine_name", "Enter the product name."); ?>
+        </div>
+
+        <div class="col-md-4">
+            <label for="product_type" class="form-label">Type <span class="req">*</span></label>
+            <select id="product_type" name="product_type" class="form-select<?php echo $invalid("product_type"); ?>" required>
+                <?php foreach (Medicine::TYPES as $t) { ?>
+                    <option value="<?php echo e($t); ?>" <?php echo $t === $form["product_type"] ? "selected" : ""; ?>><?php echo e($t); ?></option>
+                <?php } ?>
+            </select>
+            <?php echo $feedback("product_type", "Choose a type."); ?>
         </div>
 
         <div class="col-md-4">
@@ -88,6 +98,17 @@ $feedback = function (string $field, string $default) use ($errors): string {
         </div>
 
         <div class="col-md-4">
+            <label for="unit" class="form-label">Unit <span class="opt">(optional)</span></label>
+            <select id="unit" name="unit" class="form-select<?php echo $invalid("unit"); ?>">
+                <option value="">— (units)</option>
+                <?php foreach (Medicine::UNITS as $u) { ?>
+                    <option value="<?php echo e($u); ?>" <?php echo $u === $form["unit"] ? "selected" : ""; ?>><?php echo e($u); ?></option>
+                <?php } ?>
+            </select>
+            <?php echo $feedback("unit", "Choose a unit from the list."); ?>
+        </div>
+
+        <div class="col-md-4">
             <label for="unit_price" class="form-label">Unit price (<?php echo e(CURRENCY); ?>) <span class="req">*</span></label>
             <input type="number" id="unit_price" name="unit_price" class="form-control<?php echo $invalid("unit_price"); ?>"
                    min="0" step="0.01" required inputmode="decimal" placeholder="0.00"
@@ -96,11 +117,21 @@ $feedback = function (string $field, string $default) use ($errors): string {
         </div>
 
         <div class="col-md-4">
-            <label for="expiry_date" class="form-label">Expiry date <span class="req">*</span></label>
+            <label for="expiry_date" class="form-label">Expiry date <span class="opt">(optional)</span></label>
             <input type="date" id="expiry_date" name="expiry_date" class="form-control<?php echo $invalid("expiry_date"); ?>"
-                   required <?php echo $isEdit ? "" : 'min="' . date("Y-m-d") . '"'; ?>
+                   <?php echo $isEdit ? "" : 'min="' . date("Y-m-d") . '"'; ?>
                    value="<?php echo e($form["expiry_date"]); ?>">
             <?php echo $feedback("expiry_date", $isEdit ? "Enter a valid date." : "Enter today or a later date."); ?>
+            <div class="form-text">Leave empty if the product does not expire.</div>
+        </div>
+
+        <!-- Only shown when the type is Medicine (see app.js); the server ignores it for other types -->
+        <div class="col-md-4 d-flex align-items-md-end<?php echo $form["product_type"] === "Medicine" ? "" : " d-none"; ?>" id="rxField">
+            <div class="form-check mb-md-2">
+                <input type="checkbox" id="requires_rx" name="requires_rx" value="1" class="form-check-input<?php echo $invalid("requires_rx"); ?>"
+                       <?php echo $form["requires_rx"] === "1" ? "checked" : ""; ?>>
+                <label for="requires_rx" class="form-check-label">Prescription required (Rx)</label>
+            </div>
         </div>
 
         <div class="col-12">
@@ -113,6 +144,6 @@ $feedback = function (string $field, string $default) use ($errors): string {
 
     <div class="form-actions">
         <a href="<?php echo e($cancel); ?>" class="btn btn-light">Cancel</a>
-        <button type="submit" class="btn btn-primary"><?php echo $isEdit ? "Save changes" : "Save medicine"; ?></button>
+        <button type="submit" class="btn btn-primary"><?php echo $isEdit ? "Save changes" : "Save product"; ?></button>
     </div>
 </form>

@@ -2,7 +2,7 @@
 <div class="page-head">
     <div>
         <a href="view_medicine.php?id=<?php echo $id; ?>" class="back-link"><i class="bi bi-arrow-left"></i> <?php echo e($medicine["medicine_name"]); ?></a>
-        <h1>Edit medicine</h1>
+        <h1>Edit product</h1>
     </div>
 </div>
 
