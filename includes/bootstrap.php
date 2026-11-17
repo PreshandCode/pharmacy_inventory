@@ -1,12 +1,4 @@
 <?php
-// =====================================================================
-//  BOOTSTRAP - loaded at the very top of every page.
-//  1. Starts output buffering (prevents "headers already sent" errors)
-//  2. Starts a secure session
-//  3. Loads settings and helper functions
-//  4. Connects to the database
-// =====================================================================
-
 // Load this file only once per request
 if (defined("APP_BOOTSTRAPPED")) {
     return;
@@ -21,9 +13,7 @@ require_once __DIR__ . "/functions.php";
 
 date_default_timezone_set(APP_TIMEZONE);
 
-// ---------------------------------------------------------------------
 // Are we running on your own computer (XAMPP) or on InfinityFree?
-// ---------------------------------------------------------------------
 $serverName = $_SERVER["SERVER_NAME"] ?? "";
 define("IS_LOCAL", in_array($serverName, ["localhost", "127.0.0.1", "::1"], true));
 
@@ -35,9 +25,8 @@ if (IS_LOCAL) {
     ini_set("display_errors", "0");
 }
 
-// ---------------------------------------------------------------------
 // Friendly error page instead of a raw PHP/database error message
-// ---------------------------------------------------------------------
+
 set_exception_handler(function ($e) {
     error_log("[Pharmacy] " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
 
@@ -73,9 +62,8 @@ set_exception_handler(function ($e) {
     exit;
 });
 
-// ---------------------------------------------------------------------
 // Secure session
-// ---------------------------------------------------------------------
+
 if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off")
         || (($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? "") === "https");
@@ -92,11 +80,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ---------------------------------------------------------------------
 // Database connection
 //   On localhost  -> config/db_local.php (if it exists)
 //   On InfinityFree -> your original config/db_connect.php (unchanged)
-// ---------------------------------------------------------------------
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 if (!isset($conn)) {
@@ -114,12 +100,10 @@ $conn->set_charset("utf8mb4");
 // Make MySQL dates (CURDATE, NOW) match Philippine time
 $conn->query("SET time_zone = '" . DB_TIMEZONE_OFFSET . "'");
 
-// ---------------------------------------------------------------------
 // Session sign-in helpers (is_logged_in, current_user, ...)
-// ---------------------------------------------------------------------
+
 require_once __DIR__ . "/auth.php";
 
-// ---------------------------------------------------------------------
 // MVC: load classes automatically from the app/ folder
 //   new MedicineController(...)  -> app/Controllers/MedicineController.php
 //   new Medicine(...)            -> app/Models/Medicine.php
@@ -127,7 +111,6 @@ require_once __DIR__ . "/auth.php";
 // Login protection now happens inside each controller (see
 // app/Core/Controller.php), so every page that uses a controller is
 // protected automatically.
-// ---------------------------------------------------------------------
 define("APP_PATH", dirname(__DIR__) . "/app");
 
 spl_autoload_register(function (string $class) {

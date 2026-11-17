@@ -101,13 +101,14 @@ class Medicine extends Model
             case "low_out": $where[] = "quantity < ?";                  $types .= "i"; $vals[] = $low; break;
         }
         switch ($f["expiry"]) {
-            case "expired":  $where[] = "expiry_date < CURDATE()"; break;
+            case "expired":  $where[] = "expiry_date IS NOT NULL AND expiry_date < CURDATE()"; break;
             case "expiring": $where[] = "expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
                              $types .= "i"; $vals[] = $days; break;
-            case "good":     $where[] = "expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+            case "good":     $where[] = "(expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) OR expiry_date IS NULL)";
                              $types .= "i"; $vals[] = $days; break;
-            case "alert":    $where[] = "expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+            case "alert":    $where[] = "expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
                              $types .= "i"; $vals[] = $days; break;
+            case "none":     $where[] = "expiry_date IS NULL"; break;
         }
         $whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
 
@@ -116,7 +117,13 @@ class Medicine extends Model
         $page  = min(max(1, $page), $pages);
         $offset = ($page - 1) * $perPage;
 
-        $orderSql = (self::SORT_COLUMNS[$sort] ?? "medicine_name") . " " . ($dir === "desc" ? "DESC" : "ASC") . ", medicine_id ASC";
+        if ($sort === "expiry") {
+            $orderSql = ($dir === "desc")
+                ? "expiry_date IS NOT NULL, expiry_date DESC, medicine_id ASC"
+                : "expiry_date IS NULL, expiry_date ASC, medicine_id ASC";
+        } else {
+            $orderSql = (self::SORT_COLUMNS[$sort] ?? "medicine_name") . " " . ($dir === "desc" ? "DESC" : "ASC") . ", medicine_id ASC";
+        }
 
         $rows = $this->all(
             "SELECT medicine_id, medicine_name, product_type, requires_rx, category, brand, batch_number, quantity,
@@ -143,8 +150,8 @@ class Medicine extends Model
                     COALESCE(SUM(CASE WHEN expiry_date IS NULL OR expiry_date >= CURDATE() THEN quantity ELSE 0 END), 0) AS available_units,
                     COALESCE(SUM(quantity > 0 AND quantity < ?), 0) AS low_count,
                     COALESCE(SUM(quantity <= 0), 0) AS out_count,
-                    COALESCE(SUM(expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
-                    COALESCE(SUM(expiry_date < CURDATE()), 0) AS expired_count
+                    COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
+                    COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired_count
              FROM medicines",
             "ii",
             [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS]
@@ -184,7 +191,7 @@ class Medicine extends Model
     {
         return $this->all(
             "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
-             FROM medicines WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+             FROM medicines WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
              ORDER BY expiry_date ASC, medicine_name ASC LIMIT ?",
             "ii",
             [EXPIRY_WARNING_DAYS, $limit]
@@ -219,13 +226,13 @@ class Medicine extends Model
         )["c"];
     }
 
-    // Counts for the Expiry page tabs
+    // Counts for the Expiry page tabs (active tabs monitor products currently in stock)
     public function expiryCounts(int $criticalDays, int $warnDays): array
     {
         return $this->one(
-            "SELECT COALESCE(SUM(expiry_date < CURDATE()), 0) AS expired,
-                    COALESCE(SUM(expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
-                    COALESCE(SUM(expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
+            "SELECT COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired,
+                    COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
+                    COALESCE(SUM(quantity > 0 AND expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
                     COALESCE(SUM(expiry_date IS NOT NULL), 0) AS total
              FROM medicines",
             "iii",
@@ -241,6 +248,10 @@ class Medicine extends Model
         $where = ["expiry_date IS NOT NULL"];
         $types = "";
         $vals  = [];
+
+        if ($status !== "all") {
+            $where[] = "quantity > 0";
+        }
 
         switch ($status) {
             case "attention":
@@ -332,6 +343,15 @@ class Medicine extends Model
             $errors["quantity"] = "Quantity must be a whole number (0 or more).";
         } elseif ((int) $d["quantity"] > MED_MAX_QUANTITY) {
             $errors["quantity"] = "Quantity cannot be more than " . number_format(MED_MAX_QUANTITY) . ".";
+        } elseif (!$isNew && $excludeId > 0 && $d["expiry_date"] !== "") {
+            // Cannot increase stock on an expired batch in Edit Product
+            $date = DateTime::createFromFormat("!Y-m-d", $d["expiry_date"]);
+            if ($date && $date < new DateTime("today")) {
+                $currentRec = $this->one("SELECT quantity FROM medicines WHERE medicine_id = ?", "i", [$excludeId]);
+                if ($currentRec && (int) $d["quantity"] > (int) $currentRec["quantity"]) {
+                    $errors["quantity"] = "This product expired on " . format_date($d["expiry_date"]) . ". You cannot increase stock of an expired batch.";
+                }
+            }
         }
 
         // Unit price: 0 or more, up to 2 decimal places
@@ -489,6 +509,9 @@ class Medicine extends Model
                 $after = $qty;
                 if ($after === $before) {
                     $error = "The quantity is already " . qty_unit($before, $med["unit"]) . ". Nothing was changed.";
+                } elseif ($after > $before && $med["expiry_date"] !== null && $med["expiry_date"] < date("Y-m-d")) {
+                    $error = "\"" . $name . "\" expired on " . format_date($med["expiry_date"])
+                           . ". You cannot increase stock of an expired batch.";
                 }
             }
 

@@ -31,13 +31,19 @@ class AuthController extends Controller
 
         $error    = "";
         $username = "";
-        $lockedFor = max(0, (int) ($_SESSION["login_locked_until"] ?? 0) - time());
+
+        // IP-based lockout (falls back to session if login_attempts table missing)
+        $ip        = $this->clientIp();
+        $lockedFor = $users->lockoutSecondsLeft($ip);
 
         if ($this->isPost()) {
             csrf_check("login.php");
 
             $username = strtolower($this->input("username"));
             $password = (string) ($_POST["password"] ?? "");
+
+            // Re-read lockout in case another tab updated it
+            $lockedFor = $users->lockoutSecondsLeft($ip);
 
             if ($lockedFor > 0) {
                 $error = "Too many failed attempts. Please wait " . ceil($lockedFor / 60) . " minute(s) and try again.";
@@ -52,19 +58,18 @@ class AuthController extends Controller
                     if (password_needs_rehash($user["password_hash"], PASSWORD_DEFAULT)) {
                         $users->updatePassword((int) $user["user_id"], $password);
                     }
+                    $users->clearLoginAttempts($ip);
                     login_user($user);
                     $users->touchLastLogin((int) $user["user_id"]);
+                    (new AuditLog($this->db))->log("Login", "Signed in from IP: " . $ip, (int) $user["user_id"], $user["username"], $ip);
                     flash("success", "Welcome back, " . $user["full_name"] . "!");
                     redirect($next);
                 }
 
-                // Wrong username or password
-                $_SESSION["login_fails"] = (int) ($_SESSION["login_fails"] ?? 0) + 1;
-                $left = MAX_LOGIN_ATTEMPTS - $_SESSION["login_fails"];
+                // Wrong username or password — record the failed attempt
+                $left = $users->recordFailedAttempt($ip, MAX_LOGIN_ATTEMPTS, LOGIN_LOCK_MINUTES);
 
                 if ($left <= 0) {
-                    $_SESSION["login_locked_until"] = time() + LOGIN_LOCK_MINUTES * 60;
-                    $_SESSION["login_fails"] = 0;
                     $lockedFor = LOGIN_LOCK_MINUTES * 60;
                     $error = "Too many failed attempts. Login is paused for " . LOGIN_LOCK_MINUTES . " minutes.";
                 } else {
@@ -91,6 +96,11 @@ class AuthController extends Controller
             redirect(is_logged_in() ? "dashboard.php" : "login.php");
         }
         csrf_check("dashboard.php");
+
+        $curUser = current_user();
+        if ($curUser) {
+            (new AuditLog($this->db))->log("Logout", "Signed out", (int) $curUser["user_id"], $curUser["username"], $this->clientIp());
+        }
 
         logout_user();
         flash("success", "You have been signed out.");

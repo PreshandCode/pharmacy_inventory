@@ -12,16 +12,17 @@
     var data = JSON.parse(dataEl.textContent);
     var fmt = new Intl.NumberFormat("en-PH");
 
-    Chart.defaults.font.family = '"Inter", system-ui, sans-serif';
+    Chart.defaults.font.family = '"Inter", system-ui, -apple-system, sans-serif';
     Chart.defaults.font.size = 12;
     Chart.defaults.color = "#64748b";
 
-    function bars(label, values, color) {
+    function bars(label, values, color, hoverColor) {
         return {
             label: label,
             data: values,
             backgroundColor: color,
-            borderRadius: { topLeft: 4, topRight: 4 },
+            hoverBackgroundColor: hoverColor,
+            borderRadius: { topLeft: 6, topRight: 6 },
             borderSkipped: "bottom",
             maxBarThickness: 18
         };
@@ -31,7 +32,10 @@
         type: "bar",
         data: {
             labels: data.labels,
-            datasets: [bars("In", data["in"], "#16a34a"), bars("Out", data.out, "#0369a1")]
+            datasets: [
+                bars("Stock In", data["in"], "#059669", "#047857"),
+                bars("Stock Out", data.out, "#0284c7", "#0369a1")
+            ]
         },
         options: {
             responsive: true,
@@ -42,8 +46,10 @@
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: "#0f172a",
-                    padding: 10,
-                    cornerRadius: 8,
+                    padding: 12,
+                    cornerRadius: 10,
+                    titleFont: { weight: "600", size: 13 },
+                    bodyFont: { size: 12.5 },
                     callbacks: {
                         title: function (items) { return data.full[items[0].dataIndex]; },
                         label: function (ctx) { return " " + ctx.dataset.label + ": " + fmt.format(ctx.parsed.y) + " units"; }
@@ -51,7 +57,11 @@
                 }
             },
             scales: {
-                x: { grid: { display: false }, border: { color: "#e5e7eb" } },
+                x: {
+                    grid: { display: false },
+                    border: { color: "#e2e8f0" },
+                    ticks: { font: { weight: "500" } }
+                },
                 y: {
                     beginAtZero: true,
                     grid: { color: "#f1f5f9" },

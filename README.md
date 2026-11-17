@@ -37,7 +37,7 @@ Built with plain **PHP and MySQL** using an **MVC (Model–View–Controller)** 
 **Accounts and security**
 - Login with admin and staff roles (only admins can delete medicines)
 - First-time setup page to create the admin account
-- Passwords stored as secure hashes; login is paused after 5 wrong attempts
+- Passwords stored as secure hashes; login is paused after 5 wrong attempts (tracked by IP address, not browser session)
 - Automatic sign-out after 120 minutes of inactivity
 - Prepared statements on every query (SQL injection protection)
 - CSRF tokens on every form, escaped output (XSS protection)
@@ -89,8 +89,11 @@ pharmacy_inventory/
 │   ├── db_connect.php          Your real live connection - not in Git (see "Database credentials")
 │   └── db_local.php            Your XAMPP connection - not in Git
 ├── database/
-│   ├── upgrade.sql             Adds the tables and columns the system needs
-│   └── upgrade_2_products.sql  Adds product type, unit, Rx and optional expiry
+│   ├── base.sql                Fresh-install base schema (medicines table)
+│   ├── upgrade.sql             Adds description, date_added, stock_movements, users
+│   ├── upgrade_2_products.sql  Adds product type, unit, Rx and optional expiry
+│   ├── upgrade_3_security.sql  Adds IP-based login lockout table + unique batch index
+│   └── upgrade_4_audit.sql     Adds audit_logs table + last_updated column
 ├── dashboard.php, medicine.php, stock.php, expiry.php, …   Entry points (one per page)
 └── index.php                   Redirects to the dashboard
 ```
@@ -168,6 +171,10 @@ Three tables:
    Then run **`database/upgrade.sql`** (once). It adds the `description` and `date_added` columns and the `stock_movements` and `users` tables.
 
    Then run **`database/upgrade_2_products.sql`** (once). It adds product type, unit and prescription (Rx), and makes the expiry date optional.
+
+   Then run **`database/upgrade_3_security.sql`** (once). It adds IP-based login lockout tracking and a unique index on medicine name + batch number.
+
+   Then run **`database/upgrade_4_audit.sql`** (once). It creates the `audit_logs` table for tracking system actions and adds `last_updated` on medicines.
 
 4. **Create `config/db_local.php`** (this file is ignored by Git and only used on `localhost`):
 

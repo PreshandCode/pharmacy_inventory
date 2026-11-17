@@ -28,4 +28,28 @@
     <button type="submit" class="btn btn-primary w-100" <?php echo $lockedFor > 0 ? "disabled" : ""; ?>>Sign in</button>
 </form>
 
+<?php if ($lockedFor > 0) { ?>
+<p class="text-center mt-2 text-muted small" id="lockMsg">
+    You may try again in <strong id="lockTimer"><?php echo (int) $lockedFor; ?></strong> second(s).
+</p>
+<script>
+(function () {
+    var remaining = <?php echo (int) $lockedFor; ?>;
+    var timerEl = document.getElementById("lockTimer");
+    var msgEl   = document.getElementById("lockMsg");
+    var submitBtn = document.querySelector('[type="submit"]');
+    var iv = setInterval(function () {
+        remaining -= 1;
+        if (remaining <= 0) {
+            clearInterval(iv);
+            if (submitBtn) { submitBtn.disabled = false; }
+            if (msgEl) { msgEl.remove(); }
+        } else {
+            if (timerEl) { timerEl.textContent = remaining; }
+        }
+    }, 1000);
+}());
+</script>
+<?php } ?>
+
 <p class="auth-foot mb-0">Forgot your password? Ask your administrator.</p>

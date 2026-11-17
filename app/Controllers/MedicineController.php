@@ -31,6 +31,7 @@ class MedicineController extends Controller
             "expiring" => "Expiring soon (" . $days . " days)",
             "expired"  => "Expired",
             "alert"    => "Expired + expiring soon",
+            "none"     => "No expiry (devices / supplies)",
         ];
 
         // Read filters from the address bar - only allowed values are used
@@ -126,6 +127,7 @@ class MedicineController extends Controller
 
             if (!$errors) {
                 $newId = $model->create($form, current_user_id());
+                (new AuditLog($this->db))->log("Add Product", "Added product: " . $form["medicine_name"] . " (ID: #" . $newId . ", Qty: " . $form["quantity"] . ")");
                 flash("success", "\"" . $form["medicine_name"] . "\" was added.");
                 redirect("view_medicine.php?id=" . $newId);
             }
@@ -216,6 +218,8 @@ class MedicineController extends Controller
             redirect("medicine.php");
         }
 
+        (new AuditLog($this->db))->log("Edit Product", "Updated product: " . $form["medicine_name"] . " (ID: #" . $id . ")");
+
         $msg = "\"" . $form["medicine_name"] . "\" was updated.";
         if ($result["before"] !== $result["after"]) {
             $msg .= " Quantity changed from " . number_format($result["before"]) . " to " . qty_unit($result["after"], $form["unit"]) . ".";
@@ -244,6 +248,8 @@ class MedicineController extends Controller
             flash("error", "That product no longer exists.");
             redirect("medicine.php");
         }
+
+        (new AuditLog($this->db))->log("Delete Product", "Deleted product: " . $name . " (ID: #" . $id . ")");
 
         flash("success", "\"" . $name . "\" was deleted.");
 

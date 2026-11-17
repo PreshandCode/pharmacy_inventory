@@ -36,6 +36,11 @@ abstract class Controller
         if ($layout === "app") {
             // Number on the sidebar "Expiry" link
             $data["navExpiryCount"] = (new Medicine($this->db))->countUrgentExpiry();
+            // Total system notification count & urgent alerts for the top bell
+            $notifData = (new Notification($this->db))->getAllNotifications(10);
+            $data["topNotifications"] = $notifData["items"];
+            $data["topNotifUrgentCount"] = $notifData["urgentCount"];
+            $data["topNotifTotal"] = $notifData["total"];
         }
 
         // Turn ["medicines" => ...] into $medicines inside the view
@@ -132,5 +137,13 @@ abstract class Controller
         if (!$this->isPost()) {
             redirect($redirectTo);
         }
+    }
+
+    // The visitor's IP address (falls back to empty string if unavailable)
+    protected function clientIp(): string
+    {
+        // Respect reverse-proxy headers only if explicitly trusted;
+        // for a simple XAMPP / shared-hosting setup, REMOTE_ADDR is safest.
+        return trim((string) ($_SERVER["REMOTE_ADDR"] ?? ""));
     }
 }

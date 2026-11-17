@@ -1,11 +1,8 @@
 <?php
-// =====================================================================
 //  SIGN-IN SESSION HELPERS
 //  Only reads and writes the PHP session - no database work here.
 //  (Database work for users is in app/Models/User.php, and the page
 //  protection check is in app/Core/Controller.php.)
-// =====================================================================
-
 
 // Is somebody signed in?
 function is_logged_in(): bool
@@ -59,10 +56,7 @@ function login_user(array $user): void
     unset($_SESSION["csrf_token"], $_SESSION["login_fails"], $_SESSION["login_locked_until"]);
 }
 
-
-// ---------------------------------------------------------------------
 // Sign out: clear everything in the session
-// ---------------------------------------------------------------------
 function logout_user(): void
 {
     $_SESSION = [];

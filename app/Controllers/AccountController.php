@@ -61,6 +61,7 @@ class AccountController extends Controller
             flash("error", "The new password must be different from the current one.");
         } else {
             $users->updatePassword($userId, $new);
+            (new AuditLog($this->db))->log("Password Change", "Changed account password");
             session_regenerate_id(true);
             flash("success", "Your password was changed.");
         }

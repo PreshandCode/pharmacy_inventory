@@ -4,7 +4,7 @@
         <a href="medicine.php" class="back-link"><i class="bi bi-arrow-left"></i> Products</a>
         <h1 class="text-break"><?php echo e($med["medicine_name"]); ?></h1>
         <p class="d-flex flex-wrap gap-3">
-            <?php if ($med["requires_rx"]) { ?><span class="tag" title="Prescription required">Rx</span><?php } ?>
+            <?php if ($med["requires_rx"]) { ?><span class="tag tag-rx" title="Prescription required">Rx</span><?php } ?>
             <?php echo status_badge($st); ?>
             <?php echo status_badge($ex, $ex["key"] === "good" ? "Expires " . days_label($ex["days"]) : null); ?>
         </p>
@@ -17,6 +17,7 @@
                   data-confirm="&quot;<?php echo e($med["medicine_name"]); ?>&quot; will be removed. Its stock history is kept.">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="id" value="<?php echo $id; ?>">
+                <input type="hidden" name="return" value="medicine.php">
                 <button type="submit" class="btn btn-light">Delete</button>
             </form>
         <?php } ?>
@@ -46,6 +47,7 @@
         <div><dt>Batch number</dt><dd><?php echo $med["batch_number"] ? e($med["batch_number"]) : $dash; ?></dd></div>
         <div><dt>Supplier</dt><dd><?php echo $med["supplier"] ? e($med["supplier"]) : $dash; ?></dd></div>
         <div><dt>Date added</dt><dd><?php echo e(format_date($med["date_added"])); ?></dd></div>
+        <div><dt>Last updated</dt><dd><?php echo !empty($med["last_updated"]) ? e(date("M j, Y g:i A", strtotime($med["last_updated"]))) : e(format_date($med["date_added"])); ?></dd></div>
         <div><dt>Product ID</dt><dd>#<?php echo $id; ?></dd></div>
         <?php if ($med["description"]) { ?>
             <div class="wide"><dt>Description</dt><dd><?php echo e($med["description"]); ?></dd></div>

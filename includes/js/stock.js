@@ -83,6 +83,8 @@
         var problem = "";
         if (t === "in" && expired) {
             problem = "This batch has expired. Add new stock as a new product with its own expiry date.";
+        } else if (t === "set" && expired && !isNaN(after) && after > before) {
+            problem = "This batch has expired. You cannot increase stock of an expired batch.";
         } else if (t === "out" && before === 0) {
             problem = "This product is out of stock.";
         } else if (!isNaN(after) && after < 0) {

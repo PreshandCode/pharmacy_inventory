@@ -1,8 +1,6 @@
 <?php
-// =====================================================================
 //  APPLICATION SETTINGS
 //  Change these values to adjust how the system behaves.
-// =====================================================================
 
 // Name shown in the sidebar and browser tab
 define("APP_NAME", "Pharmacy");
@@ -27,9 +25,7 @@ define("DB_TIMEZONE_OFFSET", "+08:00");
 // Number of rows per page in tables
 define("ROWS_PER_PAGE", 10);
 
-// ---------------------------------------------------------------------
 // LOGIN SECURITY
-// ---------------------------------------------------------------------
 
 // Sign the user out after this many minutes without any activity
 define("SESSION_TIMEOUT_MINUTES", 120);
@@ -41,8 +37,6 @@ define("LOGIN_LOCK_MINUTES", 5);
 // Minimum password length for new accounts / password changes
 define("MIN_PASSWORD_LENGTH", 8);
 
-// ---------------------------------------------------------------------
 // MEDICINE LIMITS (match the database column sizes)
-// ---------------------------------------------------------------------
 define("MED_MAX_QUANTITY", 1000000);
 define("MED_MAX_PRICE", 99999999.99);

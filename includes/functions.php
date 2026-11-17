@@ -1,8 +1,5 @@
 <?php
-// =====================================================================
 //  HELPER FUNCTIONS - small reusable tools used by every page
-// =====================================================================
-
 
 // An error whose message is safe to show to the user on the live site
 // (e.g. "Please run upgrade.sql"). Other errors show a generic message.
@@ -11,9 +8,7 @@ class AppException extends Exception
 }
 
 
-// ---------------------------------------------------------------------
 // OUTPUT & FORMATTING
-// ---------------------------------------------------------------------
 
 // Safely print text inside HTML (prevents XSS attacks)
 function e($value): string
@@ -50,12 +45,9 @@ function current_page(): string
     return basename($_SERVER["SCRIPT_NAME"] ?? "");
 }
 
-
-// ---------------------------------------------------------------------
 // FLASH MESSAGES
 // Show a one-time notification on the next page (e.g. "Product saved")
 // type: success | error | warning | info
-// ---------------------------------------------------------------------
 
 function flash(string $type, string $message): void
 {
@@ -70,11 +62,9 @@ function get_flash_messages(): array
 }
 
 
-// ---------------------------------------------------------------------
 // CSRF PROTECTION
 // Every form that changes data includes a secret token. This stops other
 // websites from tricking a logged-in user into deleting or editing data.
-// ---------------------------------------------------------------------
 
 function csrf_token(): string
 {
@@ -100,12 +90,9 @@ function csrf_check(string $redirectTo = "dashboard.php"): void
     }
 }
 
-
-// ---------------------------------------------------------------------
 // STOCK & EXPIRY STATUS
 // One place that decides what "Low Stock" or "Expiring Soon" means,
 // so every page shows the same result.
-// ---------------------------------------------------------------------
 
 // Returns: key, label, css class, icon
 function stock_status($quantity): array
@@ -189,10 +176,7 @@ function days_label(?int $days): string
     return $ago . " day" . ($ago === 1 ? "" : "s") . " ago";
 }
 
-// ---------------------------------------------------------------------
 // LINKS & PAGINATION
-// ---------------------------------------------------------------------
-
 // Make a LIKE search safe (so % and _ typed by the user are literal)
 function like_pattern(string $text): string
 {

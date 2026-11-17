@@ -6,6 +6,7 @@
    4. Dropdowns with data-autosubmit apply immediately
    5. Form validation for forms with class="needs-validation"
    6. Product form: the Rx option is only shown for type "Medicine"
+   7. Keyboard shortcut ('/' to focus search)
    ===================================================================== */
 (function () {
     "use strict";
@@ -100,4 +101,28 @@
             if (!isMedicine) { document.getElementById("requires_rx").checked = false; }
         });
     }
+
+    /* ---------- 7. Keyboard shortcut ('/' to focus search) ---------- */
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
+            var searchInput = document.querySelector('input[type="search"]');
+            if (searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+
+    /* ---------- 8. Password show / hide toggle ---------- */
+    document.querySelectorAll("[data-toggle-password]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var input = document.getElementById(btn.getAttribute("data-toggle-password"));
+            if (!input) { return; }
+            var show = input.type === "password";
+            input.type = show ? "text" : "password";
+            btn.querySelector("i").className = show ? "bi bi-eye-slash" : "bi bi-eye";
+            btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        });
+    });
 })();

@@ -2,7 +2,7 @@
 <div class="page-head">
     <div>
         <h1>Products</h1>
-        <p><?php echo number_format($totalRows); ?> <?php echo $hasFilters ? "matching" : "in total"; ?></p>
+        <p><?php echo number_format($totalRows); ?> <?php echo $hasFilters ? "matching products found" : "products in inventory"; ?></p>
     </div>
     <div class="page-actions">
         <a href="add_medicine.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add product</a>
@@ -13,8 +13,9 @@
 <form method="GET" action="medicine.php" class="toolbar" role="search">
     <div class="search">
         <i class="bi bi-search"></i>
-        <input type="search" name="search" class="form-control" placeholder="Search name, brand, batch, supplier"
+        <input type="search" name="search" id="productSearch" class="form-control" placeholder="Search name, brand, batch, supplier"
                value="<?php echo e($search); ?>" maxlength="100" aria-label="Search products">
+        <kbd class="search-kbd" title="Press / to focus search">/</kbd>
     </div>
 
     <select name="type" class="form-select" data-autosubmit aria-label="Product type">
@@ -49,17 +50,23 @@
     <button type="submit" class="visually-hidden">Search</button>
 
     <?php if ($hasFilters) { ?>
-        <a href="medicine.php" class="clear">Clear filters</a>
+        <a href="medicine.php" class="clear"><i class="bi bi-x-circle"></i> Clear filters</a>
     <?php } ?>
 </form>
 
 <div class="card">
     <?php if (!$medicines) { ?>
         <div class="empty">
+            <div class="empty-icon"><i class="bi bi-search"></i></div>
             <?php if ($hasFilters) { ?>
-                <strong>No products match</strong>Try another search or <a href="medicine.php">clear the filters</a>.
+                <strong>No products match your criteria</strong>
+                <span>Try adjusting your filters or search keywords, or <a href="medicine.php">clear all filters</a>.</span>
             <?php } else { ?>
-                <strong>No products yet</strong><a href="add_medicine.php">Add your first product</a>
+                <strong>No products yet</strong>
+                <span>Get started by adding your first product to the inventory.</span>
+                <div class="mt-3">
+                    <a href="add_medicine.php" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add product</a>
+                </div>
             <?php } ?>
         </div>
     <?php } else { ?>
@@ -72,6 +79,7 @@
                         <?php echo sort_header("quantity", "Stock", $params, $sort, $dir, "text-end"); ?>
                         <?php echo sort_header("price", "Unit price", $params, $sort, $dir, "text-end"); ?>
                         <?php echo sort_header("expiry", "Expiry", $params, $sort, $dir); ?>
+                        <?php echo sort_header("added", "Added", $params, $sort, $dir); ?>
                         <th class="actions"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
@@ -83,8 +91,10 @@
                         $sub = array_filter([$row["brand"], $row["batch_number"] ? "Batch " . $row["batch_number"] : ""]); ?>
                         <tr>
                             <td>
-                                <a href="view_medicine.php?id=<?php echo $id; ?>" class="title"><?php echo e($row["medicine_name"]); ?></a>
-                                <?php if ($row["requires_rx"]) { ?><span class="tag" title="Prescription required">Rx</span><?php } ?>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="view_medicine.php?id=<?php echo $id; ?>" class="title"><?php echo e($row["medicine_name"]); ?></a>
+                                    <?php if ($row["requires_rx"]) { ?><span class="tag tag-rx" title="Prescription required">Rx</span><?php } ?>
+                                </div>
                                 <?php if ($sub) { ?><div class="sub"><?php echo e(implode(" · ", $sub)); ?></div><?php } ?>
                             </td>
                             <td>
@@ -92,17 +102,20 @@
                                 <div class="sub"><?php echo e($row["product_type"]); ?></div>
                             </td>
                             <td class="text-end">
-                                <span class="num"><?php echo e(qty_unit($row["quantity"], $row["unit"])); ?></span>
-                                <?php if ($st["key"] !== "in") { ?><div><?php echo status_badge($st); ?></div><?php } ?>
+                                <span class="num fw-semibold"><?php echo e(qty_unit($row["quantity"], $row["unit"])); ?></span>
+                                <?php if ($st["key"] !== "in") { ?><div class="mt-1"><?php echo status_badge($st); ?></div><?php } ?>
                             </td>
-                            <td class="text-end num"><?php echo e(money($row["unit_price"])); ?></td>
+                            <td class="text-end num font-monospace"><?php echo e(money($row["unit_price"])); ?></td>
                             <td>
                                 <?php if ($ex["key"] === "none") { ?>
-                                    <span class="muted">No expiry</span>
+                                    <span class="muted" style="font-size: 12.5px;">No expiry</span>
                                 <?php } else { ?>
-                                    <span class="num"><?php echo e(format_date($row["expiry_date"])); ?></span>
+                                    <span class="num" style="font-size: 13px;"><?php echo e(format_date($row["expiry_date"])); ?></span>
                                 <?php } ?>
-                                <?php if ($ex["key"] !== "good" && $ex["key"] !== "none") { ?><div><?php echo status_badge($ex); ?></div><?php } ?>
+                                <?php if ($ex["key"] !== "good" && $ex["key"] !== "none") { ?><div class="mt-1"><?php echo status_badge($ex); ?></div><?php } ?>
+                            </td>
+                            <td>
+                                <span class="num text-muted" style="font-size: 13px;"><?php echo e(format_date($row["date_added"])); ?></span>
                             </td>
                             <td class="actions">
                                 <a href="edit_medicine.php?id=<?php echo $id; ?>" class="icon-btn" title="Edit" aria-label="Edit <?php echo e($row["medicine_name"]); ?>"><i class="bi bi-pencil"></i></a>
@@ -125,7 +138,7 @@
         </div>
         <?php if ($totalPages > 1) { ?>
             <div class="table-foot">
-                <span><?php echo number_format($offset + 1); ?>–<?php echo number_format($offset + count($medicines)); ?> of <?php echo number_format($totalRows); ?></span>
+                <span>Showing <?php echo number_format($offset + 1); ?>–<?php echo number_format($offset + count($medicines)); ?> of <?php echo number_format($totalRows); ?></span>
                 <?php echo render_pagination("medicine.php", $params, $page, $totalPages); ?>
             </div>
         <?php } ?>

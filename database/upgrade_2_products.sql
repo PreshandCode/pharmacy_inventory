@@ -1,19 +1,3 @@
--- =====================================================================
---  PHARMACY INVENTORY SYSTEM - UPGRADE 2: PRODUCTS (run ONCE)
--- =====================================================================
---  Run this AFTER database/upgrade.sql.
---
---  HOW TO RUN:
---    1. Open phpMyAdmin and click your database in the left panel.
---    2. Click the "SQL" tab, paste this whole file, click "Go".
---
---  SAFE: this script only ADDS columns and allows an empty expiry date.
---  No records are deleted or renamed. Every existing record becomes
---  product type "Medicine".
---  Run it only once. A second run shows "Duplicate column name" and
---  changes nothing.
--- =====================================================================
-
 ALTER TABLE `medicines`
   -- Medicine, Vitamins & Supplements, Personal Care, ... (checked by the app)
   ADD COLUMN `product_type` VARCHAR(40) NOT NULL DEFAULT 'Medicine' AFTER `medicine_name`,

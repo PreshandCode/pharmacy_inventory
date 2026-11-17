@@ -28,6 +28,12 @@ class StockController extends Controller
         if ($formReason === "" && $this->query("reason") === "expired") {   // "Dispose" button on the Expiry page
             $formType   = "out";
             $formReason = "Expired - disposed";
+            if (!isset($old["quantity"]) && $selectedId > 0) {
+                $medForDispose = (new Medicine($this->db))->find($selectedId);
+                if ($medForDispose && (int) $medForDispose["quantity"] > 0) {
+                    $old = ["quantity" => (string) $medForDispose["quantity"]];
+                }
+            }
         }
 
         // History, filtered by type, 15 per page
@@ -111,6 +117,10 @@ class StockController extends Controller
         $unit   = $result["unit"];
         $before = $result["before"];
         $after  = $result["after"];
+        $auditAction = ($type === "in") ? "Stock In" : (($type === "out") ? "Stock Out" : "Stock Correction");
+        $auditDetails = $auditAction . " on " . $result["name"] . ": " . number_format($qty) . " " . ($unit ?: "units") . " (Before: " . $before . ", After: " . $after . ", Reason: " . $reason . ($note !== "" ? " - " . $note : "") . ")";
+        (new AuditLog($this->db))->log($auditAction, $auditDetails);
+
         if ($type === "in") {
             flash("success", "Added " . qty_unit($qty, $unit) . " to " . $name . ". New stock: " . qty_unit($after, $unit) . ".");
         } elseif ($type === "out") {

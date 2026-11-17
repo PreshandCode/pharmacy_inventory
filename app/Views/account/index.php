@@ -28,18 +28,27 @@
         <h2 class="fs-6 mb-3">Change password</h2>
         <div class="mb-3">
             <label for="current_password" class="form-label">Current password</label>
-            <input type="password" id="current_password" name="current_password" class="form-control" required autocomplete="current-password">
+            <div class="password-wrap">
+                <input type="password" id="current_password" name="current_password" class="form-control" required autocomplete="current-password">
+                <button type="button" class="icon-btn" data-toggle-password="current_password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+            </div>
         </div>
         <div class="row g-3">
             <div class="col-sm-6">
                 <label for="new_password" class="form-label">New password</label>
-                <input type="password" id="new_password" name="new_password" class="form-control"
-                       minlength="<?php echo (int) MIN_PASSWORD_LENGTH; ?>" required autocomplete="new-password">
+                <div class="password-wrap">
+                    <input type="password" id="new_password" name="new_password" class="form-control"
+                           minlength="<?php echo (int) MIN_PASSWORD_LENGTH; ?>" required autocomplete="new-password">
+                    <button type="button" class="icon-btn" data-toggle-password="new_password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                </div>
             </div>
             <div class="col-sm-6">
                 <label for="confirm_password" class="form-label">Confirm new password</label>
-                <input type="password" id="confirm_password" name="confirm_password" class="form-control"
-                       minlength="<?php echo (int) MIN_PASSWORD_LENGTH; ?>" required autocomplete="new-password">
+                <div class="password-wrap">
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-control"
+                           minlength="<?php echo (int) MIN_PASSWORD_LENGTH; ?>" required autocomplete="new-password">
+                    <button type="button" class="icon-btn" data-toggle-password="confirm_password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                </div>
             </div>
         </div>
         <div class="form-text">At least <?php echo (int) MIN_PASSWORD_LENGTH; ?> characters, with a letter and a number.</div>
