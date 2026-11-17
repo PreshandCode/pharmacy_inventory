@@ -178,9 +178,20 @@ class Medicine extends Model
     public function dashboardStats(?int $userId = null): array
     {
         $userId = $userId ?? current_user_id();
-        $userWhere = $userId ? "WHERE user_id = ?" : "";
-        $types = $userId ? "iii" : "ii";
-        $vals = $userId ? [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, $userId] : [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS];
+
+        if ($userId) {
+            return $this->one(
+                "SELECT COUNT(*) AS total_medicines,
+                        COALESCE(SUM(CASE WHEN expiry_date IS NULL OR expiry_date >= CURDATE() THEN quantity ELSE 0 END), 0) AS available_units,
+                        COALESCE(SUM(quantity > 0 AND quantity < ?), 0) AS low_count,
+                        COALESCE(SUM(quantity <= 0), 0) AS out_count,
+                        COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
+                        COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired_count
+                 FROM medicines WHERE user_id = ?",
+                "iii",
+                [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, $userId]
+            );
+        }
 
         return $this->one(
             "SELECT COUNT(*) AS total_medicines,
@@ -189,9 +200,9 @@ class Medicine extends Model
                     COALESCE(SUM(quantity <= 0), 0) AS out_count,
                     COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
                     COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired_count
-             FROM medicines $userWhere",
-            $types,
-            $vals
+             FROM medicines",
+            "ii",
+            [LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS]
         );
     }
 
@@ -220,13 +231,13 @@ class Medicine extends Model
     public function needsRestock(int $limit, ?int $userId = null): array
     {
         $userId = $userId ?? current_user_id();
-        $userWhere = $userId ? "AND user_id = ?" : "";
+        $userWhere = $userId ? "WHERE quantity < ? AND user_id = ?" : "WHERE quantity < ?";
         $types = $userId ? "iii" : "ii";
         $vals = $userId ? [LOW_STOCK_THRESHOLD, $userId, $limit] : [LOW_STOCK_THRESHOLD, $limit];
 
         return $this->all(
             "SELECT medicine_id, medicine_name, category, quantity, unit
-             FROM medicines WHERE quantity < ? $userWhere
+             FROM medicines $userWhere
              ORDER BY quantity ASC, medicine_name ASC LIMIT ?",
             $types,
             $vals
@@ -237,13 +248,15 @@ class Medicine extends Model
     public function expiringSoon(int $limit, ?int $userId = null): array
     {
         $userId = $userId ?? current_user_id();
-        $userWhere = $userId ? "AND user_id = ?" : "";
+        $userWhere = $userId
+            ? "WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) AND user_id = ?"
+            : "WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
         $types = $userId ? "iii" : "ii";
         $vals = $userId ? [EXPIRY_WARNING_DAYS, $userId, $limit] : [EXPIRY_WARNING_DAYS, $limit];
 
         return $this->all(
             "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
-             FROM medicines WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) $userWhere
+             FROM medicines $userWhere
              ORDER BY expiry_date ASC, medicine_name ASC LIMIT ?",
             $types,
             $vals
@@ -276,13 +289,14 @@ class Medicine extends Model
     {
         $userId = $userId ?? current_user_id();
         $critical = min(EXPIRY_CRITICAL_DAYS, EXPIRY_WARNING_DAYS);
-        $userWhere = $userId ? "AND user_id = ?" : "";
+        $userWhere = $userId
+            ? "WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) AND user_id = ?"
+            : "WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)";
         $types = $userId ? "ii" : "i";
         $vals = $userId ? [$critical, $userId] : [$critical];
 
         return (int) $this->one(
-            "SELECT COUNT(*) AS c FROM medicines
-             WHERE quantity > 0 AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY) $userWhere",
+            "SELECT COUNT(*) AS c FROM medicines $userWhere",
             $types,
             $vals
         )["c"];
@@ -292,18 +306,27 @@ class Medicine extends Model
     public function expiryCounts(int $criticalDays, int $warnDays, ?int $userId = null): array
     {
         $userId = $userId ?? current_user_id();
-        $userWhere = $userId ? "WHERE user_id = ?" : "";
-        $types = $userId ? "iiii" : "iii";
-        $vals = $userId ? [$criticalDays, $criticalDays, $warnDays, $userId] : [$criticalDays, $criticalDays, $warnDays];
+
+        if ($userId) {
+            return $this->one(
+                "SELECT COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired,
+                        COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
+                        COALESCE(SUM(quantity > 0 AND expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
+                        COALESCE(SUM(expiry_date IS NOT NULL), 0) AS total
+                 FROM medicines WHERE user_id = ?",
+                "iiii",
+                [$criticalDays, $criticalDays, $warnDays, $userId]
+            );
+        }
 
         return $this->one(
             "SELECT COALESCE(SUM(quantity > 0 AND expiry_date < CURDATE()), 0) AS expired,
                     COALESCE(SUM(quantity > 0 AND expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
                     COALESCE(SUM(quantity > 0 AND expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
                     COALESCE(SUM(expiry_date IS NOT NULL), 0) AS total
-             FROM medicines $userWhere",
-            $types,
-            $vals
+             FROM medicines",
+            "iii",
+            [$criticalDays, $criticalDays, $warnDays]
         );
     }
 

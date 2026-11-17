@@ -1,8 +1,3 @@
--- =====================================================================
---  ACCOUNT-BASED INVENTORY UPGRADE (Multi-User / Multi-Pharmacy)
---  Each user owns and manages their own separate inventory of products.
--- =====================================================================
-
 -- 1. Add user_id to medicines table
 ALTER TABLE `medicines`
   ADD COLUMN IF NOT EXISTS `user_id` INT(11) NULL AFTER `medicine_id`,
