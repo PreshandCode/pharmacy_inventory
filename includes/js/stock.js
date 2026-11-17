@@ -26,6 +26,13 @@
 
     var LABELS = { "in": "Quantity to add", "out": "Quantity to remove", "set": "New total count" };
 
+    // 50 + "box" -> "50 boxes" (same rule as qty_unit() in functions.php)
+    function withUnit(n, unit) {
+        unit = unit || "unit";
+        if (n !== 1) { unit += unit === "box" ? "es" : "s"; }
+        return fmt.format(n) + " " + unit;
+    }
+
     function type() {
         var r = form.querySelector('input[name="type"]:checked');
         return r ? r.value : "in";
@@ -64,7 +71,9 @@
         if (!opt || !opt.value) { show(""); return; }
 
         var before = parseInt(opt.dataset.qty, 10);
-        var expired = opt.dataset.expiry < TODAY;
+        var unit = opt.dataset.unit;
+        // Products without an expiry date are never expired
+        var expired = opt.dataset.expiry !== "" && opt.dataset.expiry < TODAY;
         var n = qty.value === "" ? NaN : Number(qty.value);
         var after = NaN;
         if (Number.isInteger(n) && n >= 0) {
@@ -73,11 +82,11 @@
 
         var problem = "";
         if (t === "in" && expired) {
-            problem = "This batch has expired. Add new stock as a new medicine with its own expiry date.";
+            problem = "This batch has expired. Add new stock as a new product with its own expiry date.";
         } else if (t === "out" && before === 0) {
-            problem = "This medicine is out of stock.";
+            problem = "This product is out of stock.";
         } else if (!isNaN(after) && after < 0) {
-            problem = "Only " + fmt.format(before) + " available.";
+            problem = "Only " + withUnit(before, unit) + " available.";
         } else if (!isNaN(after) && after > MAX) {
             problem = "Total cannot be more than " + fmt.format(MAX) + ".";
         } else if (t === "set" && after === before) {
@@ -95,12 +104,12 @@
         qtyFeed.textContent = "Enter a whole number.";
 
         if (isNaN(after)) {
-            show("Current stock: " + fmt.format(before));
+            show("Current stock: " + withUnit(before, unit));
             return;
         }
 
         var status = after === 0 ? "out of stock" : (after < LOW ? "low stock" : "in stock");
-        var text = fmt.format(before) + " → " + fmt.format(after) + " after saving (" + status + ")";
+        var text = fmt.format(before) + " → " + withUnit(after, unit) + " after saving (" + status + ")";
         show(text, after < LOW ? "is-warn" : "");
     }
 

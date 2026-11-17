@@ -2,7 +2,7 @@
 <div class="page-head">
     <div>
         <h1>Expiry</h1>
-        <p>Medicines expiring within <?php echo (int) $warnDays; ?> days need attention.</p>
+        <p>Products expiring within <?php echo (int) $warnDays; ?> days need attention.</p>
     </div>
     <div class="page-actions no-print">
         <button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
@@ -48,15 +48,15 @@
 <div class="card">
     <?php if (!$rows) { ?>
         <div class="empty">
-            <strong><?php echo $status === "expired" ? "No expired medicines" : "Nothing here"; ?></strong>
-            <?php echo ($search !== "" || $category !== "") ? "Try clearing the filters." : "No medicines in this group."; ?>
+            <strong><?php echo $status === "expired" ? "No expired products" : "Nothing here"; ?></strong>
+            <?php echo ($search !== "" || $category !== "") ? "Try clearing the filters." : "No products in this group."; ?>
         </div>
     <?php } else { ?>
         <div class="table-wrap">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Medicine</th>
+                        <th>Product</th>
                         <th class="text-end">Qty</th>
                         <th>Expiry date</th>
                         <th>Status</th>
@@ -89,7 +89,7 @@
                                 <a href="view_medicine.php?id=<?php echo $id; ?>" class="title"><?php echo e($r["medicine_name"]); ?></a>
                                 <?php if ($sub) { ?><div class="sub"><?php echo e(implode(" · ", $sub)); ?></div><?php } ?>
                             </td>
-                            <td class="text-end num"><?php echo number_format($qty); ?></td>
+                            <td class="text-end num"><?php echo e(qty_unit($qty, $r["unit"])); ?></td>
                             <td><span class="date <?php echo $dateClass; ?>"><?php echo e(format_date($r["expiry_date"])); ?></span></td>
                             <td><?php echo $badge; ?></td>
                             <td class="actions no-print">

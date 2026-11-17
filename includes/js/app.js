@@ -5,6 +5,7 @@
    3. Confirmation dialog for forms with data-confirm="..."
    4. Dropdowns with data-autosubmit apply immediately
    5. Form validation for forms with class="needs-validation"
+   6. Product form: the Rx option is only shown for type "Medicine"
    ===================================================================== */
 (function () {
     "use strict";
@@ -35,7 +36,7 @@
     });
 
     /* ---------- 3. Confirmation dialog ---------- */
-    // <form method="POST" data-confirm="Delete this?" data-confirm-title="Delete medicine">
+    // <form method="POST" data-confirm="Delete this?" data-confirm-title="Delete product">
     var modalEl = document.getElementById("confirmModal");
     if (modalEl) {
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -88,4 +89,15 @@
             form.classList.add("was-validated");
         }, true);
     });
+
+    /* ---------- 6. Rx option only for medicines ---------- */
+    var typeSelect = document.getElementById("product_type");
+    var rxField = document.getElementById("rxField");
+    if (typeSelect && rxField) {
+        typeSelect.addEventListener("change", function () {
+            var isMedicine = typeSelect.value === "Medicine";
+            rxField.classList.toggle("d-none", !isMedicine);
+            if (!isMedicine) { document.getElementById("requires_rx").checked = false; }
+        });
+    }
 })();

@@ -4,7 +4,7 @@
 //
 //  Set before including:
 //    $history       rows from stock_movements (+ full_name of the user)
-//    $showMedicine  true to show the medicine name column
+//    $showMedicine  true to show the product name column
 // =====================================================================
 
 $historyTypes = ["in" => "In", "out" => "Out", "adjust" => "Correction"];
@@ -14,7 +14,7 @@ $historyTypes = ["in" => "In", "out" => "Out", "adjust" => "Correction"];
         <thead>
             <tr>
                 <th>Date</th>
-                <?php if (!empty($showMedicine)) { ?><th>Medicine</th><?php } ?>
+                <?php if (!empty($showMedicine)) { ?><th>Product</th><?php } ?>
                 <th class="text-end">Change</th>
                 <th class="text-end">Balance</th>
                 <th>Reason</th>

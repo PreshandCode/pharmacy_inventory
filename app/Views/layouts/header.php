@@ -3,7 +3,7 @@
 //  PAGE HEADER - opens the HTML page and loads fonts, icons and styles.
 //
 //  Set before including this file:
-//    $pageTitle - text in the browser tab (e.g. "Medicines")
+//    $pageTitle - text in the browser tab (e.g. "Products")
 // =====================================================================
 
 

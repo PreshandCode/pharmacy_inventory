@@ -14,7 +14,7 @@ $jsVersion = @filemtime(dirname(APP_PATH) . "/includes/js/app.js") ?: 1;
     </main>
 </div>
 
-<!-- Notifications (e.g. "Medicine saved") -->
+<!-- Notifications (e.g. "Product saved") -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
     <?php foreach ($flashMessages as $msg) {
         $type = in_array($msg["type"], ["success", "error", "warning", "info"], true) ? $msg["type"] : "info"; ?>

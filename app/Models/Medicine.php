@@ -1,17 +1,28 @@
 <?php
 // =====================================================================
-//  MEDICINE MODEL  (table: medicines)
-//  Everything that reads or changes medicines: lists, filters, the
+//  PRODUCT MODEL  (table: medicines)
+//  The table keeps its old name "medicines" so nothing live breaks,
+//  but it holds every product: medicines, vitamins, supplies, ...
+//  Everything that reads or changes products: lists, filters, the
 //  dashboard numbers, validation, saving, deleting and stock changes.
 // =====================================================================
 
 class Medicine extends Model
 {
-    // The form fields of a medicine
+    // The form fields of a product
     public const FIELDS = [
-        "medicine_name", "category", "brand", "batch_number", "description",
-        "quantity", "unit_price", "expiry_date", "supplier",
+        "medicine_name", "product_type", "requires_rx", "category", "brand", "batch_number", "description",
+        "quantity", "unit", "unit_price", "expiry_date", "supplier",
     ];
+
+    // Product types. Only these values are accepted.
+    public const TYPES = [
+        "Medicine", "Vitamins & Supplements", "Personal Care", "Baby & Mother Care", "First Aid",
+        "Medical Supplies & Devices", "Beauty & Skin Care", "Food & Drinks", "Other",
+    ];
+
+    // How the quantity is counted. Only these values (or none) are accepted.
+    public const UNITS = ["piece", "box", "bottle", "pack", "tube", "sachet", "strip", "tablet"];
 
     // Sorting: allowed choices -> real columns (user text never goes into SQL)
     public const SORT_COLUMNS = [
@@ -51,13 +62,13 @@ class Medicine extends Model
     public function allForSelect(): array
     {
         return $this->all(
-            "SELECT medicine_id, medicine_name, batch_number, quantity, expiry_date
+            "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
              FROM medicines ORDER BY medicine_name ASC, expiry_date ASC"
         );
     }
 
-    // Search + filter + sort + one page of results (Medicines page).
-    //   $f = ["search", "category", "stock", "expiry"]
+    // Search + filter + sort + one page of results (Products page).
+    //   $f = ["search", "type", "category", "stock", "expiry"]
     // Returns ["rows", "total", "page", "pages", "offset"]
     public function paginate(array $f, string $sort, string $dir, int $perPage, int $page): array
     {
@@ -72,6 +83,11 @@ class Medicine extends Model
             $like = like_pattern($f["search"]);
             $types .= "ssss";
             array_push($vals, $like, $like, $like, $like);
+        }
+        if ($f["type"] !== "") {
+            $where[] = "product_type = ?";
+            $types .= "s";
+            $vals[] = $f["type"];
         }
         if ($f["category"] !== "") {
             $where[] = "category = ?";
@@ -103,8 +119,8 @@ class Medicine extends Model
         $orderSql = (self::SORT_COLUMNS[$sort] ?? "medicine_name") . " " . ($dir === "desc" ? "DESC" : "ASC") . ", medicine_id ASC";
 
         $rows = $this->all(
-            "SELECT medicine_id, medicine_name, category, brand, batch_number, quantity,
-                    unit_price, expiry_date, supplier, date_added
+            "SELECT medicine_id, medicine_name, product_type, requires_rx, category, brand, batch_number, quantity,
+                    unit, unit_price, expiry_date, supplier, date_added
              FROM medicines $whereSql
              ORDER BY $orderSql
              LIMIT ? OFFSET ?",
@@ -124,7 +140,7 @@ class Medicine extends Model
     {
         return $this->one(
             "SELECT COUNT(*) AS total_medicines,
-                    COALESCE(SUM(CASE WHEN expiry_date >= CURDATE() THEN quantity ELSE 0 END), 0) AS available_units,
+                    COALESCE(SUM(CASE WHEN expiry_date IS NULL OR expiry_date >= CURDATE() THEN quantity ELSE 0 END), 0) AS available_units,
                     COALESCE(SUM(quantity > 0 AND quantity < ?), 0) AS low_count,
                     COALESCE(SUM(quantity <= 0), 0) AS out_count,
                     COALESCE(SUM(expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS expiring_count,
@@ -135,11 +151,27 @@ class Medicine extends Model
         );
     }
 
+    // Number of products of each type, in the order of TYPES (types with none are left out)
+    public function typeCounts(): array
+    {
+        $counts = array_column(
+            $this->all("SELECT product_type, COUNT(*) AS c FROM medicines GROUP BY product_type"),
+            "c", "product_type"
+        );
+        $ordered = [];
+        foreach (self::TYPES as $t) {
+            if (!empty($counts[$t])) {
+                $ordered[$t] = (int) $counts[$t];
+            }
+        }
+        return $ordered;
+    }
+
     // Low + out of stock, lowest first
     public function needsRestock(int $limit): array
     {
         return $this->all(
-            "SELECT medicine_id, medicine_name, category, quantity
+            "SELECT medicine_id, medicine_name, category, quantity, unit
              FROM medicines WHERE quantity < ?
              ORDER BY quantity ASC, medicine_name ASC LIMIT ?",
             "ii",
@@ -151,7 +183,7 @@ class Medicine extends Model
     public function expiringSoon(int $limit): array
     {
         return $this->all(
-            "SELECT medicine_id, medicine_name, batch_number, quantity, expiry_date
+            "SELECT medicine_id, medicine_name, batch_number, quantity, unit, expiry_date
              FROM medicines WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
              ORDER BY expiry_date ASC, medicine_name ASC LIMIT ?",
             "ii",
@@ -162,7 +194,7 @@ class Medicine extends Model
     public function recentlyAdded(int $limit): array
     {
         return $this->all(
-            "SELECT medicine_id, medicine_name, category, quantity, date_added
+            "SELECT medicine_id, medicine_name, product_type, category, quantity, unit, date_added
              FROM medicines ORDER BY date_added DESC, medicine_id DESC LIMIT ?",
             "i",
             [$limit]
@@ -174,7 +206,7 @@ class Medicine extends Model
     // EXPIRY
     // =================================================================
 
-    // Medicines with stock that are expired or expire within the critical window
+    // Products with stock that are expired or expire within the critical window
     // (the red number on the sidebar)
     public function countUrgentExpiry(): int
     {
@@ -194,7 +226,7 @@ class Medicine extends Model
             "SELECT COALESCE(SUM(expiry_date < CURDATE()), 0) AS expired,
                     COALESCE(SUM(expiry_date >= CURDATE() AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS critical,
                     COALESCE(SUM(expiry_date > DATE_ADD(CURDATE(), INTERVAL ? DAY) AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)), 0) AS soon,
-                    COUNT(*) AS total
+                    COALESCE(SUM(expiry_date IS NOT NULL), 0) AS total
              FROM medicines",
             "iii",
             [$criticalDays, $criticalDays, $warnDays]
@@ -203,9 +235,10 @@ class Medicine extends Model
 
     // One page of the Expiry list, soonest expiry first.
     //   $status: attention | expired | critical | soon | all
+    // Products without an expiry date are never listed.
     public function expiryList(string $status, string $search, string $category, int $criticalDays, int $warnDays, int $perPage, int $page): array
     {
-        $where = [];
+        $where = ["expiry_date IS NOT NULL"];
         $types = "";
         $vals  = [];
 
@@ -232,7 +265,7 @@ class Medicine extends Model
             $where[] = "category = ?";
             $types .= "s"; $vals[] = $category;
         }
-        $whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
+        $whereSql = "WHERE " . implode(" AND ", $where);
 
         $total = (int) $this->one("SELECT COUNT(*) AS c FROM medicines $whereSql", $types, $vals)["c"];
         $pages = max(1, (int) ceil($total / $perPage));
@@ -240,7 +273,7 @@ class Medicine extends Model
         $offset = ($page - 1) * $perPage;
 
         $rows = $this->all(
-            "SELECT medicine_id, medicine_name, brand, batch_number, quantity, unit_price, expiry_date
+            "SELECT medicine_id, medicine_name, brand, batch_number, quantity, unit, unit_price, expiry_date
              FROM medicines $whereSql
              ORDER BY expiry_date ASC, medicine_name ASC
              LIMIT ? OFFSET ?",
@@ -256,18 +289,28 @@ class Medicine extends Model
     // VALIDATION
     // =================================================================
 
-    // Check the medicine form.
+    // Check the product form.
     //   $isNew     - true when adding (expiry date may not be in the past)
-    //   $excludeId - when editing, the medicine's own ID (for the duplicate check)
+    //   $excludeId - when editing, the product's own ID (for the duplicate check)
     // Returns ["field" => "message"]. Empty array = everything is valid.
     public function validate(array $d, bool $isNew, int $excludeId = 0): array
     {
         $errors = [];
 
         if ($d["medicine_name"] === "") {
-            $errors["medicine_name"] = "Medicine name is required.";
+            $errors["medicine_name"] = "Product name is required.";
         } elseif (mb_strlen($d["medicine_name"]) > 100) {
-            $errors["medicine_name"] = "Medicine name must be 100 characters or fewer.";
+            $errors["medicine_name"] = "Product name must be 100 characters or fewer.";
+        }
+
+        if (!in_array($d["product_type"], self::TYPES, true)) {
+            $errors["product_type"] = "Please choose a product type.";
+        }
+        if (!in_array($d["requires_rx"], ["", "1"], true)) {
+            $errors["requires_rx"] = "Invalid prescription value.";
+        }
+        if ($d["unit"] !== "" && !in_array($d["unit"], self::UNITS, true)) {
+            $errors["unit"] = "Please choose a unit from the list.";
         }
 
         if ($d["category"] === "") {
@@ -298,15 +341,17 @@ class Medicine extends Model
             $errors["unit_price"] = "Unit price is too large.";
         }
 
-        // Expiry date: a real calendar date
-        $date = DateTime::createFromFormat("!Y-m-d", $d["expiry_date"]);
-        if (!$date || $date->format("Y-m-d") !== $d["expiry_date"]) {
-            $errors["expiry_date"] = "Please enter a valid expiry date.";
-        } elseif ($isNew && $date < new DateTime("today")) {
-            $errors["expiry_date"] = "The expiry date is in the past. Expired medicines should not be added as new stock.";
+        // Expiry date: optional, but when given it must be a real calendar date
+        if ($d["expiry_date"] !== "") {
+            $date = DateTime::createFromFormat("!Y-m-d", $d["expiry_date"]);
+            if (!$date || $date->format("Y-m-d") !== $d["expiry_date"]) {
+                $errors["expiry_date"] = "Please enter a valid expiry date, or leave it empty if the product does not expire.";
+            } elseif ($isNew && $date < new DateTime("today")) {
+                $errors["expiry_date"] = "The expiry date is in the past. Expired products should not be added as new stock.";
+            }
         }
 
-        // Duplicate: same medicine name + same batch number
+        // Duplicate: same product name + same batch number
         if (!isset($errors["medicine_name"]) && $d["batch_number"] !== "") {
             $dup = $this->one(
                 "SELECT medicine_id FROM medicines WHERE medicine_name = ? AND batch_number = ? AND medicine_id <> ? LIMIT 1",
@@ -314,7 +359,7 @@ class Medicine extends Model
                 [$d["medicine_name"], $d["batch_number"], $excludeId]
             );
             if ($dup) {
-                $errors["batch_number"] = "This medicine with batch \"" . $d["batch_number"] . "\" already exists (ID #" . $dup["medicine_id"] . ").";
+                $errors["batch_number"] = "This product with batch \"" . $d["batch_number"] . "\" already exists (ID #" . $dup["medicine_id"] . ").";
             }
         }
 
@@ -328,7 +373,7 @@ class Medicine extends Model
     // record inside a transaction (all or nothing).
     // =================================================================
 
-    // Add a medicine and record its starting stock. Returns the new ID.
+    // Add a product and record its starting stock. Returns the new ID.
     public function create(array $d, ?int $userId): int
     {
         $v = $this->dbValues($d);
@@ -336,15 +381,15 @@ class Medicine extends Model
         try {
             $this->exec(
                 "INSERT INTO medicines
-                    (medicine_name, category, description, brand, batch_number, quantity, unit_price, expiry_date, supplier)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                "sssssisss",
-                [$v["name"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["price"], $v["expiry"], $v["supplier"]]
+                    (medicine_name, product_type, requires_rx, category, description, brand, batch_number, quantity, unit, unit_price, expiry_date, supplier)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "ssissssissss",
+                [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"]]
             );
             $id = (int) $this->db->insert_id;
 
             if ($v["quantity"] > 0) {
-                (new StockMovement($this->db))->log($id, $v["name"], "in", 0, $v["quantity"], "Initial stock (new medicine)", $userId);
+                (new StockMovement($this->db))->log($id, $v["name"], "in", 0, $v["quantity"], "Initial stock (new product)", $userId);
             }
             $this->db->commit();
             return $id;
@@ -355,7 +400,7 @@ class Medicine extends Model
     }
 
     // Save the edit form. Returns ["before" => old qty, "after" => new qty],
-    // or null if the medicine no longer exists.
+    // or null if the product no longer exists.
     public function update(int $id, array $d, ?int $userId): ?array
     {
         $v = $this->dbValues($d);
@@ -371,15 +416,15 @@ class Medicine extends Model
 
             $this->exec(
                 "UPDATE medicines SET
-                    medicine_name = ?, category = ?, description = ?, brand = ?, batch_number = ?,
-                    quantity = ?, unit_price = ?, expiry_date = ?, supplier = ?
+                    medicine_name = ?, product_type = ?, requires_rx = ?, category = ?, description = ?, brand = ?, batch_number = ?,
+                    quantity = ?, unit = ?, unit_price = ?, expiry_date = ?, supplier = ?
                  WHERE medicine_id = ?",
-                "sssssisssi",
-                [$v["name"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["price"], $v["expiry"], $v["supplier"], $id]
+                "ssissssissssi",
+                [$v["name"], $v["type"], $v["rx"], $v["category"], $v["description"], $v["brand"], $v["batch"], $v["quantity"], $v["unit"], $v["price"], $v["expiry"], $v["supplier"], $id]
             );
 
             if ($v["quantity"] !== $before) {
-                (new StockMovement($this->db))->log($id, $v["name"], "adjust", $before, $v["quantity"], "Quantity corrected in Edit Medicine", $userId);
+                (new StockMovement($this->db))->log($id, $v["name"], "adjust", $before, $v["quantity"], "Quantity corrected in Edit Product", $userId);
             }
             $this->db->commit();
             return ["before" => $before, "after" => $v["quantity"]];
@@ -389,8 +434,8 @@ class Medicine extends Model
         }
     }
 
-    // Delete a medicine. Its stock history is kept (medicine_id becomes empty).
-    // Returns the deleted medicine's name, or null if it was not found.
+    // Delete a product. Its stock history is kept (medicine_id becomes empty).
+    // Returns the deleted product's name, or null if it was not found.
     public function delete(int $id): ?string
     {
         $row = $this->one("SELECT medicine_name FROM medicines WHERE medicine_id = ?", "i", [$id]);
@@ -403,22 +448,22 @@ class Medicine extends Model
 
     // Stock in / out / set count, with all the safety rules:
     //   - never below 0, never more than is available
-    //   - no stock added to an expired batch
+    //   - no stock added to an expired batch (products without an expiry date are never expired)
     //   - the row is locked so two people can't change it at the same moment
     // $type: "in", "out" or "set".
-    // Returns ["error" => "..."] or ["name", "before", "after"].
+    // Returns ["error" => "..."] or ["name", "unit", "before", "after"].
     public function changeStock(int $id, string $type, int $qty, string $note, ?int $userId): array
     {
         $this->db->begin_transaction();
         try {
             $med = $this->one(
-                "SELECT medicine_id, medicine_name, quantity, expiry_date FROM medicines WHERE medicine_id = ? FOR UPDATE",
+                "SELECT medicine_id, medicine_name, quantity, unit, expiry_date FROM medicines WHERE medicine_id = ? FOR UPDATE",
                 "i",
                 [$id]
             );
             if (!$med) {
                 $this->db->rollback();
-                return ["error" => "That medicine no longer exists.", "missing" => true];
+                return ["error" => "That product no longer exists.", "missing" => true];
             }
 
             $name   = $med["medicine_name"];
@@ -427,23 +472,23 @@ class Medicine extends Model
 
             if ($type === "in") {
                 $after = $before + $qty;
-                if ($med["expiry_date"] < date("Y-m-d")) {
+                if ($med["expiry_date"] !== null && $med["expiry_date"] < date("Y-m-d")) {
                     $error = "\"" . $name . "\" expired on " . format_date($med["expiry_date"])
-                           . ". You cannot add stock to an expired batch. Add the new delivery as a new medicine with its own batch and expiry date.";
+                           . ". You cannot add stock to an expired batch. Add the new delivery as a new product with its own batch and expiry date.";
                 } elseif ($after > MED_MAX_QUANTITY) {
-                    $error = "The new total would be more than " . number_format(MED_MAX_QUANTITY) . " units.";
+                    $error = "The new total would be more than " . qty_unit(MED_MAX_QUANTITY, $med["unit"]) . ".";
                 }
             } elseif ($type === "out") {
                 $after = $before - $qty;
                 if ($before === 0) {
                     $error = "\"" . $name . "\" is out of stock. There is nothing to remove.";
                 } elseif ($after < 0) {
-                    $error = "Only " . number_format($before) . " unit(s) of \"" . $name . "\" are available. You cannot remove " . number_format($qty) . ".";
+                    $error = "Only " . qty_unit($before, $med["unit"]) . " of \"" . $name . "\" available. You cannot remove " . number_format($qty) . ".";
                 }
             } else {
                 $after = $qty;
                 if ($after === $before) {
-                    $error = "The quantity is already " . number_format($before) . ". Nothing was changed.";
+                    $error = "The quantity is already " . qty_unit($before, $med["unit"]) . ". Nothing was changed.";
                 }
             }
 
@@ -456,7 +501,7 @@ class Medicine extends Model
             (new StockMovement($this->db))->log($id, $name, $type === "set" ? "adjust" : $type, $before, $after, $note, $userId);
 
             $this->db->commit();
-            return ["name" => $name, "before" => $before, "after" => $after];
+            return ["name" => $name, "unit" => $med["unit"], "before" => $before, "after" => $after];
         } catch (Throwable $e) {
             $this->db->rollback();
             throw $e;
@@ -471,6 +516,10 @@ class Medicine extends Model
         };
         return [
             "name"        => $d["medicine_name"],
+            "type"        => $d["product_type"],
+            // Prescription only applies to medicines
+            "rx"          => ($d["product_type"] === "Medicine" && $d["requires_rx"] === "1") ? 1 : 0,
+            "unit"        => $orNull($d["unit"]),
             "category"    => $d["category"],
             "description" => $orNull($d["description"]),
             "brand"       => $orNull($d["brand"]),
@@ -478,7 +527,7 @@ class Medicine extends Model
             "supplier"    => $orNull($d["supplier"]),
             "quantity"    => (int) $d["quantity"],
             "price"       => $d["unit_price"],      // exact decimal text, e.g. "12.50"
-            "expiry"      => $d["expiry_date"],
+            "expiry"      => $orNull($d["expiry_date"]),
         ];
     }
 }

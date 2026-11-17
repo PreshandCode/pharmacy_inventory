@@ -13,7 +13,7 @@
         <div class="card-head"><h2>Update stock</h2></div>
         <div class="card-pad">
             <?php if (!$allMedicines) { ?>
-                <div class="empty"><strong>No medicines yet</strong><a href="add_medicine.php">Add a medicine first</a></div>
+                <div class="empty"><strong>No products yet</strong><a href="add_medicine.php">Add a product first</a></div>
             <?php } else { ?>
             <form method="POST" action="stock.php" class="needs-validation" novalidate id="stockForm"
                   data-low="<?php echo (int) LOW_STOCK_THRESHOLD; ?>" data-max="<?php echo MED_MAX_QUANTITY; ?>"
@@ -21,19 +21,20 @@
                 <?php echo csrf_field(); ?>
 
                 <div class="mb-3">
-                    <label for="medicine_id" class="form-label">Medicine</label>
+                    <label for="medicine_id" class="form-label">Product</label>
                     <select id="medicine_id" name="medicine_id" class="form-select" required>
-                        <option value="">Choose a medicine…</option>
+                        <option value="">Choose a product…</option>
                         <?php foreach ($allMedicines as $m) { ?>
                             <option value="<?php echo (int) $m["medicine_id"]; ?>"
                                     data-qty="<?php echo (int) $m["quantity"]; ?>"
                                     data-expiry="<?php echo e($m["expiry_date"]); ?>"
+                                    data-unit="<?php echo e($m["unit"]); ?>"
                                     <?php echo (int) $m["medicine_id"] === $selectedId ? "selected" : ""; ?>>
-                                <?php echo e($m["medicine_name"] . ($m["batch_number"] ? " · " . $m["batch_number"] : "") . " (" . number_format((int) $m["quantity"]) . ")"); ?>
+                                <?php echo e($m["medicine_name"] . ($m["batch_number"] ? " · " . $m["batch_number"] : "") . " (" . qty_unit($m["quantity"], $m["unit"]) . ")"); ?>
                             </option>
                         <?php } ?>
                     </select>
-                    <div class="invalid-feedback">Choose a medicine.</div>
+                    <div class="invalid-feedback">Choose a product.</div>
                 </div>
 
                 <div class="mb-3">

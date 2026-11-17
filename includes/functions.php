@@ -53,7 +53,7 @@ function current_page(): string
 
 // ---------------------------------------------------------------------
 // FLASH MESSAGES
-// Show a one-time notification on the next page (e.g. "Medicine saved")
+// Show a one-time notification on the next page (e.g. "Product saved")
 // type: success | error | warning | info
 // ---------------------------------------------------------------------
 
@@ -124,6 +124,11 @@ function stock_status($quantity): array
 // Returns: key, label, css class, icon, days (days until expiry; negative = expired)
 function expiry_status($expiryDate): array
 {
+    // Products such as thermometers have no expiry date
+    if ($expiryDate === null || $expiryDate === "") {
+        return ["key" => "none", "label" => "No expiry", "class" => "secondary", "icon" => "bi-dash-circle", "days" => null];
+    }
+
     $today  = new DateTime("today");
     $expiry = DateTime::createFromFormat("Y-m-d", (string) $expiryDate);
 
@@ -154,6 +159,18 @@ function status_badge(array $status, ?string $label = null): string
     return '<span class="status status-' . e($status["class"]) . '">'
         . e($label ?? $status["label"])
         . '</span>';
+}
+
+// Quantity with its unit: (50, "box") -> "50 boxes", (1, "tube") -> "1 tube",
+// (5, null) -> "5 units"
+function qty_unit($quantity, ?string $unit): string
+{
+    $quantity = (int) $quantity;
+    $unit = $unit ?: "unit";
+    if ($quantity !== 1) {
+        $unit .= ($unit === "box") ? "es" : "s";   // every other unit in Medicine::UNITS just adds "s"
+    }
+    return number_format($quantity) . " " . $unit;
 }
 
 // "in 12 days", "today", "3 days ago"
@@ -242,7 +259,7 @@ function render_pagination(
     return $html;
 }
 
-// Sortable column header for the Medicines table, e.g. sort_header("name", "Medicine", ...)
+// Sortable column header for the Products table, e.g. sort_header("name", "Medicine", ...)
 function sort_header(string $key, string $label, array $params, string $sort, string $dir, string $class = ""): string
 {
     $isSorted = ($sort === $key);

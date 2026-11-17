@@ -1,11 +1,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Medicines</h1>
+        <h1>Products</h1>
         <p><?php echo number_format($totalRows); ?> <?php echo $hasFilters ? "matching" : "in total"; ?></p>
     </div>
     <div class="page-actions">
-        <a href="add_medicine.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add medicine</a>
+        <a href="add_medicine.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add product</a>
     </div>
 </div>
 
@@ -14,8 +14,15 @@
     <div class="search">
         <i class="bi bi-search"></i>
         <input type="search" name="search" class="form-control" placeholder="Search name, brand, batch, supplier"
-               value="<?php echo e($search); ?>" maxlength="100" aria-label="Search medicines">
+               value="<?php echo e($search); ?>" maxlength="100" aria-label="Search products">
     </div>
+
+    <select name="type" class="form-select" data-autosubmit aria-label="Product type">
+        <option value="">All types</option>
+        <?php foreach ($types as $t) { ?>
+            <option value="<?php echo e($t); ?>" <?php echo $t === $type ? "selected" : ""; ?>><?php echo e($t); ?></option>
+        <?php } ?>
+    </select>
 
     <select name="category" class="form-select" data-autosubmit aria-label="Category">
         <option value="">All categories</option>
@@ -50,9 +57,9 @@
     <?php if (!$medicines) { ?>
         <div class="empty">
             <?php if ($hasFilters) { ?>
-                <strong>No medicines match</strong>Try another search or <a href="medicine.php">clear the filters</a>.
+                <strong>No products match</strong>Try another search or <a href="medicine.php">clear the filters</a>.
             <?php } else { ?>
-                <strong>No medicines yet</strong><a href="add_medicine.php">Add your first medicine</a>
+                <strong>No products yet</strong><a href="add_medicine.php">Add your first product</a>
             <?php } ?>
         </div>
     <?php } else { ?>
@@ -60,7 +67,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <?php echo sort_header("name", "Medicine", $params, $sort, $dir); ?>
+                        <?php echo sort_header("name", "Product", $params, $sort, $dir); ?>
                         <?php echo sort_header("category", "Category", $params, $sort, $dir); ?>
                         <?php echo sort_header("quantity", "Stock", $params, $sort, $dir, "text-end"); ?>
                         <?php echo sort_header("price", "Unit price", $params, $sort, $dir, "text-end"); ?>
@@ -77,23 +84,31 @@
                         <tr>
                             <td>
                                 <a href="view_medicine.php?id=<?php echo $id; ?>" class="title"><?php echo e($row["medicine_name"]); ?></a>
+                                <?php if ($row["requires_rx"]) { ?><span class="tag" title="Prescription required">Rx</span><?php } ?>
                                 <?php if ($sub) { ?><div class="sub"><?php echo e(implode(" · ", $sub)); ?></div><?php } ?>
                             </td>
-                            <td><span class="tag"><?php echo e($row["category"]); ?></span></td>
+                            <td>
+                                <span class="tag"><?php echo e($row["category"]); ?></span>
+                                <div class="sub"><?php echo e($row["product_type"]); ?></div>
+                            </td>
                             <td class="text-end">
-                                <span class="num"><?php echo number_format((int) $row["quantity"]); ?></span>
+                                <span class="num"><?php echo e(qty_unit($row["quantity"], $row["unit"])); ?></span>
                                 <?php if ($st["key"] !== "in") { ?><div><?php echo status_badge($st); ?></div><?php } ?>
                             </td>
                             <td class="text-end num"><?php echo e(money($row["unit_price"])); ?></td>
                             <td>
-                                <span class="num"><?php echo e(format_date($row["expiry_date"])); ?></span>
-                                <?php if ($ex["key"] !== "good") { ?><div><?php echo status_badge($ex); ?></div><?php } ?>
+                                <?php if ($ex["key"] === "none") { ?>
+                                    <span class="muted">No expiry</span>
+                                <?php } else { ?>
+                                    <span class="num"><?php echo e(format_date($row["expiry_date"])); ?></span>
+                                <?php } ?>
+                                <?php if ($ex["key"] !== "good" && $ex["key"] !== "none") { ?><div><?php echo status_badge($ex); ?></div><?php } ?>
                             </td>
                             <td class="actions">
                                 <a href="edit_medicine.php?id=<?php echo $id; ?>" class="icon-btn" title="Edit" aria-label="Edit <?php echo e($row["medicine_name"]); ?>"><i class="bi bi-pencil"></i></a>
                                 <?php if (is_admin()) { ?>
                                     <form action="delete_medicine.php" method="POST" class="d-inline"
-                                          data-confirm-title="Delete medicine?"
+                                          data-confirm-title="Delete product?"
                                           data-confirm-button="Delete"
                                           data-confirm="&quot;<?php echo e($row["medicine_name"]); ?>&quot; will be removed. Its stock history is kept.">
                                         <?php echo csrf_field(); ?>
