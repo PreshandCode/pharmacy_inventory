@@ -40,11 +40,12 @@ set_exception_handler(function ($e) {
           . htmlspecialchars($e->getMessage()) . "</p>"
         : "";
 
-    // Technical details are shown only on your own computer (localhost)
+    // Technical details are shown on localhost OR if ?debug=1 is in the URL
     $technical = "";
-    if (IS_LOCAL && !($e instanceof AppException)) {
-        $technical = "<pre style='white-space:pre-wrap;font-size:13px;background:#f8fafc;padding:12px;border-radius:8px'>"
-            . htmlspecialchars($e->getMessage() . "\n" . $e->getFile() . ":" . $e->getLine())
+    $showDebug = IS_LOCAL || isset($_GET["debug"]) || (isset($_SERVER["QUERY_STRING"]) && strpos($_SERVER["QUERY_STRING"], "debug") !== false);
+    if ($showDebug && !($e instanceof AppException)) {
+        $technical = "<pre style='white-space:pre-wrap;font-size:13px;background:#f8fafc;padding:12px;border-radius:8px;color:#dc2626;border:1px solid #fecaca;margin-top:12px;overflow-x:auto'>"
+            . htmlspecialchars($e->getMessage() . "\n\nFile: " . $e->getFile() . ":" . $e->getLine() . "\n\nStack trace:\n" . $e->getTraceAsString())
             . "</pre>";
     }
 

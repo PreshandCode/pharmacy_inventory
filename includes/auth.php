@@ -56,27 +56,14 @@ function login_user(array $user): void
     unset($_SESSION["csrf_token"], $_SESSION["login_fails"], $_SESSION["login_locked_until"]);
 }
 
-// Sign out: clear everything in the session
+// Sign out: clear everything in the session safely
 function logout_user(): void
 {
     $_SESSION = [];
 
-    if (ini_get("session.use_cookies")) {
-        $p = session_get_cookie_params();
-        setcookie(session_name(), "", [
-            "expires"  => time() - 42000,
-            "path"     => $p["path"],
-            "domain"   => $p["domain"],
-            "secure"   => $p["secure"],
-            "httponly" => $p["httponly"],
-            "samesite" => $p["samesite"] ?? "Lax",
-        ]);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
     }
-    session_destroy();
-
-    // Start a fresh, empty session so a "signed out" message can be shown
-    session_start();
-    session_regenerate_id(true);
 }
 
 

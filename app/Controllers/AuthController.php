@@ -39,7 +39,7 @@ class AuthController extends Controller
         if ($this->isPost()) {
             csrf_check("login.php");
 
-            $username = strtolower($this->input("username"));
+            $username = trim($this->input("username"));
             $password = (string) ($_POST["password"] ?? "");
 
             // Re-read lockout in case another tab updated it
@@ -88,15 +88,10 @@ class AuthController extends Controller
     }
 
     // -----------------------------------------------------------------
-    // SIGN OUT
+    // SIGN OUT (Supports both button POST and direct URL GET)
     // -----------------------------------------------------------------
     public function logout(): void
     {
-        if (!$this->isPost()) {
-            redirect(is_logged_in() ? "dashboard.php" : "login.php");
-        }
-        csrf_check("dashboard.php");
-
         $curUser = current_user();
         if ($curUser) {
             (new AuditLog($this->db))->log("Logout", "Signed out", (int) $curUser["user_id"], $curUser["username"], $this->clientIp());
@@ -128,14 +123,14 @@ class AuthController extends Controller
             csrf_check("setup_admin.php");
 
             $fullName = $this->input("full_name");
-            $username = strtolower($this->input("username"));
+            $username = trim($this->input("username"));
             $password = (string) ($_POST["password"] ?? "");
             $confirm  = (string) ($_POST["confirm_password"] ?? "");
 
             if ($fullName === "" || mb_strlen($fullName) > 100) {
                 $errors[] = "Please enter your full name (up to 100 characters).";
             }
-            if (!preg_match('/^[a-z0-9._]{3,50}$/', $username)) {
+            if (!preg_match('/^[A-Za-z0-9._]{3,50}$/', $username)) {
                 $errors[] = "Username must be 3–50 characters: letters, numbers, dot or underscore.";
             }
             if (strlen($password) < MIN_PASSWORD_LENGTH) {
@@ -191,14 +186,14 @@ class AuthController extends Controller
             csrf_check("register.php");
 
             $fullName = $this->input("full_name");
-            $username = strtolower($this->input("username"));
+            $username = trim($this->input("username"));
             $password = (string) ($_POST["password"] ?? "");
             $confirm  = (string) ($_POST["confirm_password"] ?? "");
 
             if ($fullName === "" || mb_strlen($fullName) > 100) {
                 $errors[] = "Please enter your full name or pharmacy name (up to 100 characters).";
             }
-            if (!preg_match('/^[a-z0-9._]{3,50}$/', $username)) {
+            if (!preg_match('/^[A-Za-z0-9._]{3,50}$/', $username)) {
                 $errors[] = "Username must be 3–50 characters: letters, numbers, dot or underscore.";
             } elseif ($users->existsByUsername($username)) {
                 $errors[] = "The username \"" . e($username) . "\" is already taken. Please choose another.";

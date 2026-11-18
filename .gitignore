@@ -7,6 +7,8 @@
 #   config/db_connect.example.php is the shared template
 config/db_local.php
 config/db_connect.php
+deploy.ps1
+deploy.sh
 
 # Uploaded files
 storage/uploads/*
