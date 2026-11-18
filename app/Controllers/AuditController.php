@@ -1,9 +1,6 @@
 <?php
-// =====================================================================
 //  AUDIT CONTROLLER  (page: audit.php)
 //  View the system audit trail / activity log.
-// =====================================================================
-
 class AuditController extends Controller
 {
     public function index(): void

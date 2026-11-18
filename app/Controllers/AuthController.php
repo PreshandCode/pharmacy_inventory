@@ -1,10 +1,8 @@
 <?php
-// =====================================================================
 //  AUTH CONTROLLER - pages anyone may open (no sign-in needed)
 //    login()   login.php        sign in, with lockout after wrong passwords
 //    logout()  logout.php       sign out (Sign out button only)
 //    setup()   setup_admin.php  create the first admin (only while no accounts exist)
-// =====================================================================
 
 class AuthController extends Controller
 {
@@ -14,9 +12,7 @@ class AuthController extends Controller
     // response time does not reveal which usernames are real.
     private const DUMMY_HASH = '$2y$10$00qttlRJoB/bpnJdJRUj8ORhypA0l5i8UqA0VDGf/zhSUk86Vcbu2';
 
-    // -----------------------------------------------------------------
     // SIGN IN
-    // -----------------------------------------------------------------
     public function login(): void
     {
         $users = new User($this->db);
@@ -102,9 +98,7 @@ class AuthController extends Controller
         redirect("login.php");
     }
 
-    // -----------------------------------------------------------------
     // FIRST-TIME SETUP
-    // -----------------------------------------------------------------
     public function setup(): void
     {
         $users = new User($this->db);
@@ -167,9 +161,7 @@ class AuthController extends Controller
         ], "auth");
     }
 
-    // -----------------------------------------------------------------
     // USER REGISTRATION (Create new account)
-    // -----------------------------------------------------------------
     public function register(): void
     {
         $users = new User($this->db);

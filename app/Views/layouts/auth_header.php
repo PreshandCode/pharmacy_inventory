@@ -22,10 +22,23 @@ $cssVersion = @filemtime(dirname(APP_PATH) . "/includes/css/style.css") ?: 1;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="includes/css/style.css?v=<?php echo $cssVersion; ?>" rel="stylesheet">
+
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 
 <body>
-<div class="auth-page">
+<div class="auth-page position-relative">
+    <div style="position: absolute; top: 18px; right: 20px; z-index: 10;">
+        <button type="button" class="btn btn-light rounded-circle p-2 theme-toggle-btn shadow-sm" aria-label="Toggle dark/light mode" title="Toggle theme" style="width: 38px; height: 38px; display: inline-grid; place-items: center;">
+            <i class="bi bi-moon-stars-fill theme-icon"></i>
+        </button>
+    </div>
     <div class="auth-box">
 
         <div class="brand">

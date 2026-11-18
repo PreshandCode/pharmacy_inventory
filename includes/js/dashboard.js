@@ -28,7 +28,9 @@
         };
     }
 
-    new Chart(canvas, {
+    var isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+
+    var chart = new Chart(canvas, {
         type: "bar",
         data: {
             labels: data.labels,
@@ -59,16 +61,25 @@
             scales: {
                 x: {
                     grid: { display: false },
-                    border: { color: "#e2e8f0" },
-                    ticks: { font: { weight: "500" } }
+                    border: { color: isDark ? "#334155" : "#e2e8f0" },
+                    ticks: { color: isDark ? "#94a3b8" : "#64748b", font: { weight: "500" } }
                 },
                 y: {
                     beginAtZero: true,
-                    grid: { color: "#f1f5f9" },
+                    grid: { color: isDark ? "rgba(51, 65, 85, 0.4)" : "#f1f5f9" },
                     border: { display: false },
-                    ticks: { maxTicksLimit: 5, callback: function (v) { return fmt.format(v); } }
+                    ticks: { color: isDark ? "#94a3b8" : "#64748b", maxTicksLimit: 5, callback: function (v) { return fmt.format(v); } }
                 }
             }
         }
+    });
+
+    window.addEventListener("themechanged", function (e) {
+        var dark = e.detail && e.detail.theme === "dark";
+        chart.options.scales.x.border.color = dark ? "#334155" : "#e2e8f0";
+        chart.options.scales.x.ticks.color = dark ? "#94a3b8" : "#64748b";
+        chart.options.scales.y.grid.color = dark ? "rgba(51, 65, 85, 0.4)" : "#f1f5f9";
+        chart.options.scales.y.ticks.color = dark ? "#94a3b8" : "#64748b";
+        chart.update();
     });
 })();

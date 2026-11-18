@@ -1,9 +1,6 @@
 <?php
-// =====================================================================
 //  DASHBOARD CONTROLLER  (page: dashboard.php)
 //  Collects the overview numbers from the models and shows the view.
-// =====================================================================
-
 class DashboardController extends Controller
 {
     public function index(): void

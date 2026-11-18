@@ -125,4 +125,33 @@
             btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
         });
     });
+
+    /* ---------- 9. Light / Dark Mode Toggle ---------- */
+    function updateThemeIcons(theme) {
+        document.querySelectorAll(".theme-icon").forEach(function (icon) {
+            if (theme === "dark") {
+                icon.className = "bi bi-sun-fill text-warning theme-icon";
+            } else {
+                icon.className = "bi bi-moon-stars-fill text-secondary theme-icon";
+            }
+        });
+    }
+
+    // Set initial icon on load
+    var currentTheme = document.documentElement.getAttribute("data-bs-theme") || "light";
+    updateThemeIcons(currentTheme);
+
+    document.querySelectorAll(".theme-toggle-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var activeTheme = document.documentElement.getAttribute("data-bs-theme") || "light";
+            var nextTheme = activeTheme === "dark" ? "light" : "dark";
+
+            document.documentElement.setAttribute("data-bs-theme", nextTheme);
+            document.documentElement.setAttribute("data-theme", nextTheme);
+            localStorage.setItem("theme", nextTheme);
+            updateThemeIcons(nextTheme);
+
+            window.dispatchEvent(new CustomEvent("themechanged", { detail: { theme: nextTheme } }));
+        });
+    });
 })();

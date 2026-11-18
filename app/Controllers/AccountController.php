@@ -1,8 +1,6 @@
 <?php
-// =====================================================================
 //  ACCOUNT CONTROLLER  (page: account.php)
 //  The signed-in user can change their name and password.
-// =====================================================================
 
 class AccountController extends Controller
 {

@@ -81,8 +81,13 @@ $navBadges = ["expiry.php" => (int) ($navExpiryCount ?? 0)];
 
 <!-- ============================== MAIN AREA ============================== -->
 <div class="main">
-    <!-- Top Utility Bar with System Notification Bell & User Controls -->
-    <header class="top-nav-bar d-flex justify-content-end align-items-center px-4 py-2 border-bottom bg-white" style="height: 54px; position: sticky; top: 0; z-index: 1020; gap: 12px; width: 100%; box-sizing: border-box;">
+    <!-- Top Utility Bar with Theme Toggle, Notification Bell & User Controls -->
+    <header class="top-nav-bar d-flex justify-content-end align-items-center px-4 py-2" style="height: 54px; position: sticky; top: 0; z-index: 1020; gap: 12px; width: 100%; box-sizing: border-box;">
+        <!-- Light / Dark Mode Toggle -->
+        <button type="button" class="btn btn-light rounded-circle p-2 theme-toggle-btn shadow-xs" aria-label="Toggle dark/light mode" title="Toggle theme" style="width: 38px; height: 38px; display: inline-grid; place-items: center;">
+            <i class="bi bi-moon-stars-fill theme-icon"></i>
+        </button>
+
         <div class="dropdown">
             <button class="btn btn-light position-relative p-2 rounded-circle" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="System Notifications">
                 <i class="bi bi-bell fs-5"></i>

@@ -1,9 +1,3 @@
-/* =====================================================================
-   PHARMACY INVENTORY SYSTEM - MODERN MEDICAL EMERALD & SLATE STYLES
-   Clean, simple, high-craft, and eye-catching.
-   Palette: Rich Emerald, Slate Neutrals, Soft Pastel Status Tints.
-   ===================================================================== */
-
 /* ---------- 1. Design Tokens & Colors ---------- */
 :root {
     /* Primary Emerald Palette */
@@ -105,6 +99,241 @@
     --bs-link-color-rgb: 5, 150, 105;
     --bs-link-hover-color: var(--emerald-700);
     --bs-link-hover-color-rgb: 4, 120, 87;
+}
+
+/* ---------- 1b. Dark Theme Variables & System Overrides ---------- */
+[data-bs-theme="dark"],
+[data-theme="dark"] {
+    --ink:           #f8fafc;
+    --ink-2:         #cbd5e1;
+    --muted:         #94a3b8;
+    --muted-light:   #64748b;
+    --line:          #334155;
+    --line-2:        #1e293b;
+    --page:          #0b1120;
+    --white:         #1e293b;
+
+    --slate-50:      #1e293b;
+    --slate-100:     #334155;
+    --slate-200:     #475569;
+    --slate-300:     #64748b;
+
+    /* Semantic Accent Tints for Dark Mode */
+    --emerald-50:    rgba(16, 185, 129, 0.14);
+    --emerald-100:   rgba(16, 185, 129, 0.22);
+    --emerald-200:   rgba(16, 185, 129, 0.32);
+
+    --rose-50:       rgba(244, 63, 94, 0.14);
+    --rose-100:      rgba(244, 63, 94, 0.22);
+    --rose-200:      rgba(244, 63, 94, 0.32);
+
+    --amber-50:      rgba(245, 158, 11, 0.14);
+    --amber-100:     rgba(245, 158, 11, 0.22);
+    --amber-200:     rgba(245, 158, 11, 0.32);
+
+    --orange-50:     rgba(249, 115, 22, 0.14);
+    --orange-100:    rgba(249, 115, 22, 0.22);
+    --orange-200:    rgba(249, 115, 22, 0.32);
+
+    --sky-50:        rgba(14, 165, 233, 0.14);
+    --sky-100:       rgba(14, 165, 233, 0.22);
+    --sky-200:       rgba(14, 165, 233, 0.32);
+
+    --shadow-xs:     0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-sm:     0 1px 3px 0 rgba(0, 0, 0, 0.6);
+    --shadow-md:     0 4px 6px -1px rgba(0, 0, 0, 0.6);
+    --shadow-hover:  0 10px 20px -3px rgba(0, 0, 0, 0.7);
+    --shadow-lg:     0 20px 25px -5px rgba(0, 0, 0, 0.8);
+
+    --bs-body-bg: var(--page);
+    --bs-body-color: var(--ink);
+    --bs-border-color: var(--line);
+}
+
+[data-bs-theme="dark"] .top-nav-bar {
+    background: #1e293b !important;
+    border-bottom: 1px solid var(--line) !important;
+}
+
+[data-bs-theme="dark"] .table > thead th {
+    background: #1e293b;
+    border-color: var(--line);
+    color: var(--muted);
+}
+
+[data-bs-theme="dark"] .table > tbody td {
+    border-color: var(--line-2);
+}
+
+[data-bs-theme="dark"] .table-foot {
+    background: #1e293b;
+    border-color: var(--line-2);
+}
+
+[data-bs-theme="dark"] .page-link {
+    background: #1e293b;
+    border-color: var(--line);
+    color: var(--ink-2);
+}
+
+[data-bs-theme="dark"] .page-link:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+[data-bs-theme="dark"] .input-group-text {
+    background: #0f172a;
+    border-color: var(--line);
+    color: var(--muted);
+}
+
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: #0f172a;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    background-color: #0f172a;
+    border-color: var(--emerald-500);
+    color: var(--ink);
+}
+
+[data-bs-theme="dark"] .kpi-card {
+    background: #1e293b;
+    border-color: var(--line);
+}
+
+[data-bs-theme="dark"] .kpi-emerald {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.28);
+}
+[data-bs-theme="dark"] .kpi-emerald .kpi-label { color: #34d399; }
+[data-bs-theme="dark"] .kpi-emerald .kpi-value { color: #6ee7b7; }
+[data-bs-theme="dark"] .kpi-emerald .kpi-sub   { color: #34d399; }
+[data-bs-theme="dark"] .kpi-emerald:hover {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-blue {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: rgba(14, 165, 233, 0.28);
+}
+[data-bs-theme="dark"] .kpi-blue .kpi-label { color: #38bdf8; }
+[data-bs-theme="dark"] .kpi-blue .kpi-value { color: #7dd3fc; }
+[data-bs-theme="dark"] .kpi-blue .kpi-sub   { color: #38bdf8; }
+[data-bs-theme="dark"] .kpi-blue:hover {
+    background: rgba(14, 165, 233, 0.18);
+    border-color: rgba(14, 165, 233, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-amber {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.28);
+}
+[data-bs-theme="dark"] .kpi-amber .kpi-label { color: #fbbf24; }
+[data-bs-theme="dark"] .kpi-amber .kpi-value { color: #fde68a; }
+[data-bs-theme="dark"] .kpi-amber:hover {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-rose {
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(244, 63, 94, 0.28);
+}
+[data-bs-theme="dark"] .kpi-rose .kpi-label { color: #fb7185; }
+[data-bs-theme="dark"] .kpi-rose .kpi-value { color: #fecdd3; }
+[data-bs-theme="dark"] .kpi-rose:hover {
+    background: rgba(244, 63, 94, 0.18);
+    border-color: rgba(244, 63, 94, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-orange {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.28);
+}
+[data-bs-theme="dark"] .kpi-orange .kpi-label { color: #fb923c; }
+[data-bs-theme="dark"] .kpi-orange .kpi-value { color: #fed7aa; }
+[data-bs-theme="dark"] .kpi-orange:hover {
+    background: rgba(249, 115, 22, 0.18);
+    border-color: rgba(249, 115, 22, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-red {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.28);
+}
+[data-bs-theme="dark"] .kpi-red .kpi-label { color: #f87171; }
+[data-bs-theme="dark"] .kpi-red .kpi-value { color: #fca5a5; }
+[data-bs-theme="dark"] .kpi-red:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+[data-bs-theme="dark"] .kpi-badge {
+    background: #0f172a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+[data-bs-theme="dark"] .badge-neutral {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--slate-300);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+[data-bs-theme="dark"] .tag {
+    background: #334155;
+    color: #e2e8f0;
+    border-color: #475569;
+}
+
+[data-bs-theme="dark"] .preview {
+    background: #0f172a;
+    border-color: var(--line);
+    color: var(--ink-2);
+}
+
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: #1e293b;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--ink-2);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover {
+    background-color: #334155;
+    color: #f8fafc;
+}
+
+[data-bs-theme="dark"] .list-group-item {
+    background-color: #1e293b;
+    border-color: var(--line-2);
+    color: var(--ink);
+}
+
+[data-bs-theme="dark"] .list-group-item-action:hover {
+    background-color: #334155;
+}
+
+[data-bs-theme="dark"] .search-kbd {
+    background: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+}
+
+[data-bs-theme="dark"] .btn-light {
+    --bs-btn-color: #e2e8f0;
+    --bs-btn-bg: #1e293b;
+    --bs-btn-border-color: #334155;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #334155;
+    --bs-btn-hover-border-color: #475569;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1317,6 +1546,10 @@ th .sort i { font-size: 12px; }
 }
 .dropdown-item i { color: var(--muted); font-size: 15px; }
 
+
+[data-bs-theme="dark"] .auth-page {
+    background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, #0b1120 70%);
+}
 
 /* ---------- 11. Auth Pages (Login & Setup) ---------- */
 .auth-page {

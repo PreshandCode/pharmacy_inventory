@@ -29,6 +29,14 @@ $cssVersion = @filemtime(dirname(APP_PATH) . "/includes/css/style.css") ?: 1;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
     <link href="includes/css/style.css?v=<?php echo $cssVersion; ?>" rel="stylesheet">
+
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 
 <body>
