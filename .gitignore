@@ -9,6 +9,7 @@ config/db_local.php
 config/db_connect.php
 deploy.ps1
 deploy.sh
+deploy.bat
 
 # Uploaded files
 storage/uploads/*
